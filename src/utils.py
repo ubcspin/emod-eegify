@@ -44,12 +44,13 @@ def create_dataset(src_dir: str, out_dir = 'feeltrace', num_workers=2) -> None:
     EEG_FT_DATA does not exist
     """
     subject_data_dir = glob.glob(os.path.join(src_dir, 'p*'))
+    subject_data_dir.sort(key=lambda x:int(x.split("p")[-1])) # sort in non decreasing order
 
     subject_data = [glob.glob(os.path.join(x, '*')) for x in subject_data_dir]
 
     all_eeg_data = [ next(filter(lambda item: 'eeg.mat' in item and 'eeg_eeg.mat' not in item, x))for x in subject_data] # find all eeg.mat
     all_joystick_data = [ next(filter(lambda item: 'joystick.mat' in item and 'joystick_joystick.mat' not in item, x)) for x in subject_data] # final all joystick.mat
-    all_scene_data = [ next(filter(lambda item: 'scenes_fixed.mat' in item, x)) for x in subject_data] # final all joystick.mat
+    all_scene_data = [ next(filter(lambda item: 'scenes.mat' in item, x)) for x in subject_data] # final all joystick.mat
 
 
     # the next steps takes a bit of time!!
@@ -74,32 +75,32 @@ def write_to_csv_dataset_loop(index: int, x: str, y: str, z:str, out_dir) -> Non
 
     eeg = sp_io.loadmat(x)['var']
     ft = sp_io.loadmat(y)['var']
-    scenes_data = sp_io.loadmat(z)['var'][:,[-2,-4]] # extract the time and label columns
-    scenes_data = np.apply_along_axis(lambda x: [x[0].item(),x[1].item()], -1, scenes_data) # clean up nested arrays
+    #scenes_data = sp_io.loadmat(z)['var'][:,[-2,-4]] # extract the time and label columns
+    #scenes_data = np.apply_along_axis(lambda x: [x[0].item(),x[1].item()], -1, scenes_data) # clean up nested arrays
 
     normalized_eeg, normalized_ft = filter_normalize_crop(eeg, ft)
 
     eeg_df = pd.DataFrame(data=normalized_eeg, columns=eeg_column_headers, dtype='float64')
     ft_df = pd.DataFrame(data=normalized_ft, columns=ft_column_headers, dtype='float64')
-    scenes_df = pd.DataFrame(data=scenes_data, columns=scenes_column_headers)
-    scenes_df = scenes_df.astype({'t':'float64', 'scene':'str'})
+    #scenes_df = pd.DataFrame(data=scenes_data, columns=scenes_column_headers)
+    #scenes_df = scenes_df.astype({'t':'float64', 'scene':'str'})
 
     ft_df = interpolate_df(ft_df, resample_period='1ms') # resample every milliseconds using zero-hold
 
     eeg_df['t'] = pd.to_datetime(eeg_df['t'], unit='ms').astype('datetime64[ms]') # change precision to ms
-    scenes_df['t'] = pd.to_datetime(scenes_df['t'], unit='ms').astype('datetime64[ms]') # change precision to ms
+    #scenes_df['t'] = pd.to_datetime(scenes_df['t'], unit='ms').astype('datetime64[ms]') # change precision to ms
 
 
     merged_df = pd.merge(ft_df, eeg_df, on='t', copy=False) # merge where times overlap
     merged_df['t'] = merged_df['t'].astype('int64') / 1e9 # nano second to seconds
-    scenes_df['t'] = scenes_df['t'].astype('int64') / 1e9 # nano second to seconds
+    #scenes_df['t'] = scenes_df['t'].astype('int64') / 1e9 # nano second to seconds
     merged_df.to_csv(os.path.join(out_dir, f'eeg_ft_{index}.csv'), index=False)
-    scenes_df.to_csv(os.path.join(out_dir, f'scenes_{index}.csv'), index=False)
+    #scenes_df.to_csv(os.path.join(out_dir, f'scenes_{index}.csv'), index=False)
 
     del merged_df
     del eeg_df
     del ft_df
-    del scenes_df
+    #del scenes_df
 
 
 def filter_normalize_crop(eeg: np.array, ft: np.array) -> tuple:

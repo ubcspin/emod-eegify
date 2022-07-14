@@ -56,10 +56,10 @@ def load_dataset(dir = 'feeltrace', subject_num = 5):
     print(f"Chosen subject: {eeg_ft}")
     
     data_signal = pd.read_csv(eeg_ft) # read the Nx(1+1+64) data for a single subject
-    scene_signal = pd.read_csv(eeg_ft.replace('eeg_ft_', 'scenes_', 1))
+    #scene_signal = pd.read_csv(eeg_ft.replace('eeg_ft_', 'scenes_', 1))
 
     # return signal
-    return data_signal, scene_signal
+    return data_signal, -1#scene_signal
 
 def generate_label(eeg_ft, split_size=100, k=5, label_type='angle', num_classes=3, kf=False, R=1e3, var=1e3, p=1e3):
 
