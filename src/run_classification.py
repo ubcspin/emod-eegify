@@ -61,7 +61,7 @@ def load_dataset(dir = 'feeltrace', subject_num = 5):
     # return signal
     return data_signal, scene_signal
 
-def generate_label(eeg_ft, split_size=100, k=5, label_type='angle', num_classes=3, kf=False):
+def generate_label(eeg_ft, split_size=100, k=5, label_type='angle', num_classes=3, kf=False, R=1e3, var=1e3, p=1e3):
 
     # split into windows (non-overlapping)
     dataset = [eeg_ft[x : x + split_size] for x in range(0, len(eeg_ft), split_size)]
@@ -69,7 +69,7 @@ def generate_label(eeg_ft, split_size=100, k=5, label_type='angle', num_classes=
         dataset.pop() # remove last window if it is smaller than the rest
 
     if label_type != 'both':
-        labels, raw_label = get_label(dataset, n_labels=num_classes, label_type=label_type, kf=kf, dt=split_size/1000) # (N, 1)
+        labels, raw_label = get_label(dataset, n_labels=num_classes, label_type=label_type, kf=kf, dt=split_size/1000, R=R, var=var, p=p) # (N, 1)
     else:
         labels, raw_label = get_combined_label(dataset, n_labels=int(np.sqrt(num_classes))) # (N, 1)
 
@@ -106,7 +106,7 @@ def apply_kalman(raw_label, dt=1e-3, R=1e2, var=1e2, p=1e2):
         kf_signal[i] = x
     return kf_signal
 
-def get_label(data, n_labels=3, label_type='angle', kf=False, dt=1e-3):
+def get_label(data, n_labels=3, label_type='angle', kf=False, dt=1e-3, R=1e3, var=1e3, p=1e3):
     if label_type == 'angle':
         labels = stress_2_angle(np.vstack([x[:,1].T for x in data])) # angle/slope mapped to [0,1] in a time window
     elif label_type == 'pos':
@@ -115,7 +115,7 @@ def get_label(data, n_labels=3, label_type='angle', kf=False, dt=1e-3):
         labels = stress_2_accumulator(np.vstack([x[:,1].T for x in data])) # accumulator mapped to [0,1] in a time window
 
     if kf:
-        labels = apply_kalman(labels, dt, R=1e3, var=1e3, p=1e3)
+        labels = apply_kalman(labels, dt, R=R, var=var, p=p)
         
     label_dist = stress_2_label(labels, n_labels=n_labels).squeeze()
     return label_dist, labels.squeeze()
@@ -327,7 +327,7 @@ def train_classifier(model, num_epochs=5, batch_size=1, learning_rate=1e-3, feat
     return train_metrics
         
 
-def main_runner(subject_choice=1, label_type='angle'):
+def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3):
 
     dir = '../eeg_feeltrace' # directory containing *.csv files
     # hyper parameters
@@ -343,7 +343,7 @@ def main_runner(subject_choice=1, label_type='angle'):
 
 
     eeg_ft_signal, scenes_df = load_dataset(dir = dir, subject_num = subject_num)
-    eeg_features, labels, indices, kf_raw_label = generate_label(eeg_ft_signal.values, split_size=window_size, k=k_fold, label_type=label_type, num_classes=num_classes, kf=apply_kf)
+    eeg_features, labels, indices, kf_raw_label = generate_label(eeg_ft_signal.values, split_size=window_size, k=k_fold, label_type=label_type, num_classes=num_classes, kf=apply_kf, R=R, var=var, p=p)
 
     #dataset, labels, indices = load_and_split_dataset(dir, split_size=window_size, subject_num = subject_num, k=k_fold, label_type=label_type, num_classes=num_classes)
     print(f"Label class bincount: {np.bincount(labels, minlength=num_classes)}")
@@ -407,14 +407,19 @@ def main_runner(subject_choice=1, label_type='angle'):
 
 def run():
     subjects = [(x+1) for x in range(16)]
+
+    R=1e3 # state uncertainty
+    var=1e1 # process uncertainty
+    p=1e3 # covariance matrix parameter
+
     t0 = time.time()
     
     label_type = 'pos'
-    result_list_1 = np.vstack([main_runner(subject, label_type) for subject in tqdm(subjects)])
+    result_list_1 = np.vstack([main_runner(subject, label_type, R=R, var=var, p=p) for subject in tqdm(subjects)])
     label_type = 'angle'
-    result_list_2 = np.vstack([main_runner(subject, label_type) for subject in tqdm(subjects)])
+    result_list_2 = np.vstack([main_runner(subject, label_type, R=R, var=var, p=p) for subject in tqdm(subjects)])
     label_type = 'accumulator'
-    result_list_3 = np.vstack([main_runner(subject, label_type) for subject in tqdm(subjects)])
+    result_list_3 = np.vstack([main_runner(subject, label_type, R=R, var=var, p=p) for subject in tqdm(subjects)])
 
     result_list = np.vstack([result_list_1, result_list_2, result_list_3])
     t1 = time.time()
@@ -424,7 +429,7 @@ def run():
     else:
         result_df = pd.DataFrame(result_list, columns=['Participant', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Label Type', 'Window [ms]', 'Modality', 'Accuracy', 'F1-Score', 'STDEV Accuracy', 'STDEV F1-Score'])
 
-    result_df.to_csv('eeg_classification_result_simple_kf.csv', index=False)
+    result_df.to_csv('eeg_classification_result_simple_cnn_kf_03.csv', index=False)
 
 
 if __name__ == '__main__':
