@@ -169,6 +169,12 @@ def split_dataset(labels, k=5, strat=True):
     indices = [(train_index, test_index) for train_index, test_index in kf.split(temp_features, labels)]
     return indices
 
+def signaltonoise(a, axis=0):
+    a = np.asanyarray(a)
+    m = a.mean(axis)
+    sd = a.std(axis=axis)
+    return m**2/sd**2
+
 def generate_eeg_features(dataset):
     sample_freq = 1000
     # get FFT
@@ -343,6 +349,8 @@ def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3):
 
 
     eeg_ft_signal, scenes_df = load_dataset(dir = dir, subject_num = subject_num)
+    snr = signaltonoise(eeg_ft_signal.values[:,1])
+    R = 10**(-snr/10)*1e4
     eeg_features, labels, indices, kf_raw_label = generate_label(eeg_ft_signal.values, split_size=window_size, k=k_fold, label_type=label_type, num_classes=num_classes, kf=apply_kf, R=R, var=var, p=p)
 
     #dataset, labels, indices = load_and_split_dataset(dir, split_size=window_size, subject_num = subject_num, k=k_fold, label_type=label_type, num_classes=num_classes)
@@ -402,34 +410,37 @@ def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3):
     print(f"Accuracy, Average accuracy: {k_acc}, {np.mean(k_acc)}")
     print(f"F1-Score, Average F1-Score: {k_f1}, {np.mean(k_f1)}")
     p_label = f'P0{subject_choice}' if subject_choice < 10 else f'P{subject_choice}'
-    ret = [p_label] + [x for x in np.bincount(labels, minlength=num_classes)] + [label_type, window_size, 'EEG', np.mean(k_acc), np.mean(k_f1), np.std(k_acc), np.std(k_f1)]
+    ret = [p_label] + [x for x in np.bincount(labels, minlength=num_classes)] + [label_type, window_size, 'EEG', np.mean(k_acc), np.mean(k_f1), np.std(k_acc), np.std(k_f1), R, var]
     return ret
 
 def run():
     subjects = [(x+1) for x in range(16)]
 
-    R=1e3 # state uncertainty
-    var=1e1 # process uncertainty
-    p=1e3 # covariance matrix parameter
+    #R=1e1 # state uncertainty
+    #var=1e2 # process uncertainty
+    p=1e2 # covariance matrix parameter
+
+    var_set = [1e-5, 1e-3, 1e-1, 1e1, 1e3, 1e5]
 
     t0 = time.time()
-    
-    label_type = 'pos'
-    result_list_1 = np.vstack([main_runner(subject, label_type, R=R, var=var, p=p) for subject in tqdm(subjects)])
     label_type = 'angle'
-    result_list_2 = np.vstack([main_runner(subject, label_type, R=R, var=var, p=p) for subject in tqdm(subjects)])
-    label_type = 'accumulator'
-    result_list_3 = np.vstack([main_runner(subject, label_type, R=R, var=var, p=p) for subject in tqdm(subjects)])
+    
+    # # label_type = 'pos'
+    # result_list_1 = np.vstack([main_runner(subject, label_type, var=var, p=p) for subject in tqdm(subjects)])
+    # #label_type = 'angle'
+    # result_list_2 = np.vstack([main_runner(subject, label_type, var=var, p=p) for subject in tqdm(subjects)])
+    # # label_type = 'accumulator'
+    # result_list_3 = np.vstack([main_runner(subject, label_type, var=var, p=p) for subject in tqdm(subjects)])
 
-    result_list = np.vstack([result_list_1, result_list_2, result_list_3])
+    result_list = np.vstack([np.vstack([main_runner(subject, label_type, var=var, p=p) for subject in tqdm(subjects)]) for var in var_set]) #np.vstack([result_list_1, result_list_2, result_list_3])
     t1 = time.time()
     print(f"Total time (s): {t1-t0}")
     if label_type != 'both':
-        result_df = pd.DataFrame(result_list, columns=['Participant', 'Class 1', 'Class 2', 'Class 3', 'Label Type', 'Window [ms]', 'Modality', 'Accuracy', 'F1-Score', 'STDEV Accuracy', 'STDEV F1-Score'])
+        result_df = pd.DataFrame(result_list, columns=['Participant', 'Class 1', 'Class 2', 'Class 3', 'Label Type', 'Window [ms]', 'Modality', 'Accuracy', 'F1-Score', 'STDEV Accuracy', 'STDEV F1-Score', 'Kalman R', 'Kalman Var'])
     else:
         result_df = pd.DataFrame(result_list, columns=['Participant', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Label Type', 'Window [ms]', 'Modality', 'Accuracy', 'F1-Score', 'STDEV Accuracy', 'STDEV F1-Score'])
 
-    result_df.to_csv('eeg_classification_result_simple_cnn_kf_03.csv', index=False)
+    result_df.to_csv('eeg_classification_result_simple_cnn_kf_07.csv', index=False)
 
 
 if __name__ == '__main__':
