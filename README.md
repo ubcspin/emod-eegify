@@ -4,9 +4,9 @@ These are the set of modules used for classification of EEG signals using emotio
 
 # Guide
 - unzip trial_data_split-anon.zip from the server into the a folder called participant folder (participant/p1 participant/p2 etc should be visible)
-- Run the ```convert_string_to_char_fix.sh``` to load the scene data correctly in python
-- From the src directory run ```python3 generate_feeltrace.py``` or ```python generate_feeltrace.py``` on non unix machines. This will create the csv files for each subject and will take some time since the dataset is large (~5GB)
-- The csv files containing the feeltrace signals are located in 'feeltrace' by default
+- From the src directory run ```python3 generate_eeg_feeltrace.py``` or ```python generate_eeg_feeltrace.py``` on non unix machines. This will create the csv files for each subject and will take some time since the dataset is large (~5GB)
+- The csv files containing the eeg and feeltrace signals are located in 'eeg_feeltrace' by default
 
 # Notes
-    - The feeltrace signals are sampled at ~30Hz but other signals, for example, EEG are sampled at 1000Hz. Further processing is required to account for this
+    - The feeltrace signals are resampled at 1kHz to match the sampling frequency of the eeg signal
+    - To load 'scenes.mat' in python, run the ```convert_string_to_char_fix.sh``` to load the scene data correctly in python
