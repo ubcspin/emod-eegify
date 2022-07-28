@@ -246,7 +246,7 @@ def train_classifier(model, num_epochs=5, batch_size=1, learning_rate=1e-3, feat
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
     criterion = nn.CrossEntropyLoss()
     train_dataset = classifier_dataset(features, labels)
@@ -354,9 +354,9 @@ def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3, ove
     #dataset, labels, indices = load_and_split_dataset(dir, split_size=window_size, subject_num = subject_num, k=k_fold, label_type=label_type, num_classes=num_classes)
     print(f"Label class bincount: {np.bincount(labels, minlength=num_classes)}")
     
-    k_acc = [] # accuracies for each fold
+    k_recall = [] # recall for each fold
     k_f1 = [] # f1 score for each fold
-    k_cm = [] # confusion matrix for each fold
+    k_prec = [] # precision for each fold
 
     for cur_k in range(len(indices)):
         print(f"Training k={cur_k}")
@@ -390,15 +390,17 @@ def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3, ove
 
         prf = precision_recall_fscore_support(test_labels, np.array([x.argmax() for x in preds]), average='macro', zero_division=0)
 
-        cm = confusion_matrix(test_labels, [x.argmax() for x in preds], labels=np.arange(num_classes), normalize='true')
-        acc = cm.diagonal().mean()#np.mean(test_labels == np.array([x.argmax() for x in preds]))
+        #cm = confusion_matrix(test_labels, [x.argmax() for x in preds], labels=np.arange(num_classes), normalize='true')
+        #acc = cm.diagonal().mean()#np.mean(test_labels == np.array([x.argmax() for x in preds]))
         print(f"Precision: {prf[0]}")
         print(f"Recall: {prf[1]}")
         print(f"F1-Score: {prf[2]}")
-        print(f"Accuracy: {acc}")
+        #print(f"Accuracy: {acc}")
 
-        k_acc.append(acc)
-        k_f1.append(prf[2])
+        k_recall.append(perf[1]) # recall
+        k_prec.append(perf[0]) # precision
+        k_f1.append(prf[2]) # f1
+
 
         
         #k_cm.append(cm)
@@ -407,10 +409,11 @@ def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3, ove
         #disp.plot(ax=axs)
         #plt.show()
 
-    print(f"Accuracy, Average accuracy: {k_acc}, {np.mean(k_acc)}")
+    print(f"Recall, Average recall: {k_recall}, {np.mean(k_recall)}")
+    print(f"Precision, Average precision: {k_prec}, {np.mean(k_prec)}")
     print(f"F1-Score, Average F1-Score: {k_f1}, {np.mean(k_f1)}")
     p_label = f'P0{subject_choice}' if subject_choice < 10 else f'P{subject_choice}'
-    ret = [p_label] + [x for x in np.bincount(labels, minlength=num_classes)] + [label_type, window_size, 'EEG', np.mean(k_acc), np.mean(k_f1), np.std(k_acc), np.std(k_f1), R, var, overlap]
+    ret = [p_label] + [x for x in np.bincount(labels, minlength=num_classes)] + [label_type, window_size, overlap, 'EEG', np.mean(k_recall), np.mean(k_prec), np.mean(k_f1), np.std(k_recall), np.std(k_prec), np.std(k_f1)]
     return ret
 
 def run():
@@ -419,7 +422,7 @@ def run():
     R=1e3 # state uncertainty
     var=1e-1 # process uncertainty
     p=1e2 # covariance matrix parameter
-    overlap=0.5 # overlap ratio
+    overlap=0.7 # overlap ratio
 
 
     t0 = time.time()
@@ -434,12 +437,9 @@ def run():
     result_list = np.vstack([result_list_1, result_list_2, result_list_3])
     t1 = time.time()
     print(f"Total time (s): {t1-t0}")
-    if label_type != 'both':
-        result_df = pd.DataFrame(result_list, columns=['Participant', 'Class 1', 'Class 2', 'Class 3', 'Label Type', 'Window [ms]', 'Modality', 'Accuracy', 'F1-Score', 'STDEV Accuracy', 'STDEV F1-Score', 'Kalman R', 'Kalman Var', 'overlap'])
-    else:
-        result_df = pd.DataFrame(result_list, columns=['Participant', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Label Type', 'Window [ms]', 'Modality', 'Accuracy', 'F1-Score', 'STDEV Accuracy', 'STDEV F1-Score'])
 
-    result_df.to_csv('eeg_classification_result_simple_cnn_kf_10.csv', index=False)
+    result_df = pd.DataFrame(result_list, columns=['Participant', 'Class 1', 'Class 2', 'Class 3', 'Label Type', 'Window [ms]', 'Overlap', 'Modality', 'Recall', 'Precision', 'F1-Score', 'STDEV Recall', 'STDEV Precision', 'STDEV F1-Score'])
+    result_df.to_csv('eeg_classification_result_simple_cnn_11.csv', index=False)
 
 
 if __name__ == '__main__':
