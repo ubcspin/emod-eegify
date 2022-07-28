@@ -61,12 +61,10 @@ def load_dataset(dir = 'feeltrace', subject_num = 5):
     # return signal
     return data_signal, -1#scene_signal
 
-def generate_label(eeg_ft, split_size=100, k=5, label_type='angle', num_classes=3, kf=False, R=1e3, var=1e3, p=1e3):
-
-    # split into windows (non-overlapping)
-    dataset = [eeg_ft[x : x + split_size] for x in range(0, len(eeg_ft), split_size)]
-    if len(dataset[-1]) < split_size:
-        dataset.pop() # remove last window if it is smaller than the rest
+def generate_label(eeg_ft, split_size=100, k=5, label_type='angle', num_classes=3, kf=False, R=1e3, var=1e3, p=1e3, overlap=0.5):
+    # split into windows (with overlap %)
+    dataset = [eeg_ft[x : x + split_size] for x in range(0, len(eeg_ft), int(split_size * (1.0-overlap)))]
+    dataset = [x for x in dataset if len(x) == split_size] # remove last windows if they are smaller than the rest
 
     if label_type != 'both':
         labels, raw_label = get_label(dataset, n_labels=num_classes, label_type=label_type, kf=kf, dt=split_size/1000, R=R, var=var, p=p) # (N, 1)
@@ -178,7 +176,7 @@ def signaltonoise(a, axis=0):
 def generate_eeg_features(dataset):
     sample_freq = 1000
     # get FFT
-    psd_windows = [signal.periodogram(x[:,2:], sample_freq, axis=0) for x in dataset ] # get the power spectral density for each window
+    psd_windows = [signal.periodogram(x[:,2:], sample_freq, window='hamming', axis=0) for x in dataset ] # get the power spectral density for each window
 
     # frequency bands
     bands={'alpha': (8, 12), 'beta': (12, 30), 'delta': (1, 4), 'theta': (4, 7), 'gamma': (30, 50)}
@@ -212,7 +210,7 @@ class classifier(nn.Module):
 
 
         self.cnn = nn.Sequential(
-            nn.Conv2d(5, 8, 3, padding='same'),
+            nn.Conv2d(5, 8, 3, padding='same', padding_mode='circular'),
             nn.ReLU()
         )
         
@@ -333,14 +331,14 @@ def train_classifier(model, num_epochs=5, batch_size=1, learning_rate=1e-3, feat
     return train_metrics
         
 
-def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3):
+def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3, overlap=0.5):
 
     dir = '../eeg_feeltrace' # directory containing *.csv files
     # hyper parameters
     window_size = 500 # must be an int in milliseconds
     subject_num = subject_choice # which subject to choose [1-16]
     k_fold = 5 # k for k fold validation
-    apply_kf = True # apply kalman filter
+    apply_kf = False # apply kalman filter
     num_classes = 3 if label_type != 'both' else 9 # number of classes to discretize the labels into
     num_features = 64 # eeg feature size
     classifier_learning_rate = 1e-3 # adam learning rate
@@ -349,9 +347,9 @@ def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3):
 
 
     eeg_ft_signal, scenes_df = load_dataset(dir = dir, subject_num = subject_num)
-    snr = signaltonoise(eeg_ft_signal.values[:,1])
+    #snr = signaltonoise(eeg_ft_signal.values[:,1])
     #R = 10**(-snr/10)*1e4
-    eeg_features, labels, indices, kf_raw_label = generate_label(eeg_ft_signal.values, split_size=window_size, k=k_fold, label_type=label_type, num_classes=num_classes, kf=apply_kf, R=R, var=var, p=p)
+    eeg_features, labels, indices, kf_raw_label = generate_label(eeg_ft_signal.values, split_size=window_size, k=k_fold, label_type=label_type, num_classes=num_classes, kf=apply_kf, R=R, var=var, p=p, overlap=overlap)
 
     #dataset, labels, indices = load_and_split_dataset(dir, split_size=window_size, subject_num = subject_num, k=k_fold, label_type=label_type, num_classes=num_classes)
     print(f"Label class bincount: {np.bincount(labels, minlength=num_classes)}")
@@ -391,7 +389,9 @@ def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3):
 
 
         prf = precision_recall_fscore_support(test_labels, np.array([x.argmax() for x in preds]), average='macro', zero_division=0)
-        acc = np.mean(test_labels == np.array([x.argmax() for x in preds]))
+
+        cm = confusion_matrix(test_labels, [x.argmax() for x in preds], labels=np.arange(num_classes), normalize='true')
+        acc = cm.diagonal().mean()#np.mean(test_labels == np.array([x.argmax() for x in preds]))
         print(f"Precision: {prf[0]}")
         print(f"Recall: {prf[1]}")
         print(f"F1-Score: {prf[2]}")
@@ -400,7 +400,7 @@ def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3):
         k_acc.append(acc)
         k_f1.append(prf[2])
 
-        cm = confusion_matrix(test_labels, [x.argmax() for x in preds], labels=np.arange(num_classes), normalize=None)
+        
         #k_cm.append(cm)
         #disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.arange(num_classes))
 
@@ -410,37 +410,36 @@ def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3):
     print(f"Accuracy, Average accuracy: {k_acc}, {np.mean(k_acc)}")
     print(f"F1-Score, Average F1-Score: {k_f1}, {np.mean(k_f1)}")
     p_label = f'P0{subject_choice}' if subject_choice < 10 else f'P{subject_choice}'
-    ret = [p_label] + [x for x in np.bincount(labels, minlength=num_classes)] + [label_type, window_size, 'EEG', np.mean(k_acc), np.mean(k_f1), np.std(k_acc), np.std(k_f1), R, var]
+    ret = [p_label] + [x for x in np.bincount(labels, minlength=num_classes)] + [label_type, window_size, 'EEG', np.mean(k_acc), np.mean(k_f1), np.std(k_acc), np.std(k_f1), R, var, overlap]
     return ret
 
 def run():
     subjects = [(x+1) for x in range(16)]
 
     R=1e3 # state uncertainty
-    #var=1e2 # process uncertainty
+    var=1e-1 # process uncertainty
     p=1e2 # covariance matrix parameter
+    overlap=0.5 # overlap ratio
 
-    var = 1e-1
 
     t0 = time.time()
-    label_type = 'angle'
     
-    # # label_type = 'pos'
-    # result_list_1 = np.vstack([main_runner(subject, label_type, var=var, p=p) for subject in tqdm(subjects)])
-    #label_type = 'angle'
-    result_list_2 = np.vstack([main_runner(subject, label_type, R=R, var=var, p=p) for subject in tqdm(subjects)])
-    # # label_type = 'accumulator'
-    # result_list_3 = np.vstack([main_runner(subject, label_type, var=var, p=p) for subject in tqdm(subjects)])
+    label_type = 'pos'
+    result_list_1 = np.vstack([main_runner(subject, label_type, R=R, var=var, p=p, overlap=overlap) for subject in tqdm(subjects)])
+    label_type = 'angle'
+    result_list_2 = np.vstack([main_runner(subject, label_type, R=R, var=var, p=p, overlap=overlap) for subject in tqdm(subjects)])
+    label_type = 'accumulator'
+    result_list_3 = np.vstack([main_runner(subject, label_type, R=R, var=var, p=p, overlap=overlap) for subject in tqdm(subjects)])
 
-    result_list = result_list_2 #np.vstack([result_list_1, result_list_2, result_list_3])
+    result_list = np.vstack([result_list_1, result_list_2, result_list_3])
     t1 = time.time()
     print(f"Total time (s): {t1-t0}")
     if label_type != 'both':
-        result_df = pd.DataFrame(result_list, columns=['Participant', 'Class 1', 'Class 2', 'Class 3', 'Label Type', 'Window [ms]', 'Modality', 'Accuracy', 'F1-Score', 'STDEV Accuracy', 'STDEV F1-Score', 'Kalman R', 'Kalman Var'])
+        result_df = pd.DataFrame(result_list, columns=['Participant', 'Class 1', 'Class 2', 'Class 3', 'Label Type', 'Window [ms]', 'Modality', 'Accuracy', 'F1-Score', 'STDEV Accuracy', 'STDEV F1-Score', 'Kalman R', 'Kalman Var', 'overlap'])
     else:
         result_df = pd.DataFrame(result_list, columns=['Participant', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Label Type', 'Window [ms]', 'Modality', 'Accuracy', 'F1-Score', 'STDEV Accuracy', 'STDEV F1-Score'])
 
-    result_df.to_csv('eeg_classification_result_simple_cnn_kf_09.csv', index=False)
+    result_df.to_csv('eeg_classification_result_simple_cnn_kf_10.csv', index=False)
 
 
 if __name__ == '__main__':
