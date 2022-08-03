@@ -26,8 +26,6 @@ import torch
 
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 from sklearn.metrics import precision_recall_fscore_support
-from sklearn.model_selection import train_test_split
-from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import StratifiedKFold
 
 # loading bar
@@ -56,10 +54,9 @@ def load_dataset(dir = 'feeltrace', subject_num = 5):
     print(f"Chosen subject: {eeg_ft}")
     
     data_signal = pd.read_csv(eeg_ft) # read the Nx(1+1+64) data for a single subject
-    #scene_signal = pd.read_csv(eeg_ft.replace('eeg_ft_', 'scenes_', 1))
 
     # return signal
-    return data_signal, -1#scene_signal
+    return data_signal
 
 def generate_label(eeg_ft, split_size=100, k=5, label_type='angle', num_classes=3, kf=False, R=1e3, var=1e3, p=1e3, overlap=0.5):
     # split into windows (with overlap %)
@@ -167,12 +164,6 @@ def split_dataset(labels, k=5, strat=True):
     indices = [(train_index, test_index) for train_index, test_index in kf.split(temp_features, labels)]
     return indices
 
-def signaltonoise(a, axis=0):
-    a = np.asanyarray(a)
-    m = a.mean(axis)
-    sd = a.std(axis=axis)
-    return m**2/sd**2
-
 def generate_eeg_features(dataset):
     sample_freq = 1000
     # get FFT
@@ -210,7 +201,7 @@ class classifier(nn.Module):
 
 
         self.cnn = nn.Sequential(
-            nn.Conv2d(5, 8, 3, padding='same', padding_mode='circular'),
+            nn.Conv2d(5, 8, 3, padding='same', padding_mode='circular'), # loop the sides during convolution
             nn.ReLU()
         )
         
@@ -346,12 +337,9 @@ def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3, ove
     classifier_hidden = 8 # classifier parameter, the larger the more complicated the model
 
 
-    eeg_ft_signal, scenes_df = load_dataset(dir = dir, subject_num = subject_num)
-    #snr = signaltonoise(eeg_ft_signal.values[:,1])
-    #R = 10**(-snr/10)*1e4
+    eeg_ft_signal = load_dataset(dir = dir, subject_num = subject_num)
     eeg_features, labels, indices, kf_raw_label = generate_label(eeg_ft_signal.values, split_size=window_size, k=k_fold, label_type=label_type, num_classes=num_classes, kf=apply_kf, R=R, var=var, p=p, overlap=overlap)
 
-    #dataset, labels, indices = load_and_split_dataset(dir, split_size=window_size, subject_num = subject_num, k=k_fold, label_type=label_type, num_classes=num_classes)
     print(f"Label class bincount: {np.bincount(labels, minlength=num_classes)}")
     
     k_recall = [] # recall for each fold
@@ -382,32 +370,15 @@ def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3, ove
             y_hat = F.softmax(y_hat.detach(), dim=-1).cpu().numpy()
             preds = y_hat
 
-        # fig, axs = plt.subplots(figsize=(20,20), dpi=120)
-        # axs.set_title(f"LSTM Feel Trace Model Confusion Matrix - Emotion-as-{label_type}", fontsize=20)
-        # axs.set_xlabel("Predicted Label", fontsize=15)
-        # axs.set_ylabel("True Label", fontsize=15)
-
-
         prf = precision_recall_fscore_support(test_labels, np.array([x.argmax() for x in preds]), average='macro', zero_division=0)
 
-        #cm = confusion_matrix(test_labels, [x.argmax() for x in preds], labels=np.arange(num_classes), normalize='true')
-        #acc = cm.diagonal().mean()#np.mean(test_labels == np.array([x.argmax() for x in preds]))
         print(f"Precision: {prf[0]}")
         print(f"Recall: {prf[1]}")
         print(f"F1-Score: {prf[2]}")
-        #print(f"Accuracy: {acc}")
 
-        k_recall.append(perf[1]) # recall
-        k_prec.append(perf[0]) # precision
+        k_prec.append(prf[0]) # precision
+        k_recall.append(prf[1]) # recall
         k_f1.append(prf[2]) # f1
-
-
-        
-        #k_cm.append(cm)
-        #disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.arange(num_classes))
-
-        #disp.plot(ax=axs)
-        #plt.show()
 
     print(f"Recall, Average recall: {k_recall}, {np.mean(k_recall)}")
     print(f"Precision, Average precision: {k_prec}, {np.mean(k_prec)}")
@@ -422,7 +393,7 @@ def run():
     R=1e3 # state uncertainty
     var=1e-1 # process uncertainty
     p=1e2 # covariance matrix parameter
-    overlap=0.7 # overlap ratio
+    overlap=0.0 # overlap ratio
 
 
     t0 = time.time()
