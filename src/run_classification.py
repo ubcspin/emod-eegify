@@ -181,7 +181,8 @@ def generate_eeg_features(dataset):
         freq_res = freqs[1] - freqs[0]
         band_powers = np.array([sp.integrate.simpson(psd[idx,:], dx=freq_res, axis=0) for idx in idx_bands]) # (5,64)
         total_powers = np.array([sp.integrate.simpson(psd, dx=freq_res, axis=0) for idx in idx_bands]) # (5,64)
-        diff_entropy = -0.5 * np.log(band_powers/total_powers)
+        normed_powers = band_powers
+        diff_entropy = np.log(normed_powers)
         # (5, 1, 64)
         # (5, 64, 1)
         diff_de = np.expand_dims(diff_entropy, axis=2) - np.expand_dims(diff_entropy, axis=1) # (5,64,64)
@@ -208,7 +209,9 @@ class classifier(nn.Module):
         self.classify = nn.Sequential(
             nn.Flatten(),
             nn.Dropout(p=dropout),
-            nn.Linear(64 * 64 * 8, self.n_classes))
+            nn.Linear(64* 64 * 8, 256),
+            nn.ReLU(),
+            nn.Linear(256, self.n_classes))
     
     def forward(self,x):
         x = self.cnn(x)
@@ -237,7 +240,7 @@ def train_classifier(model, num_epochs=5, batch_size=1, learning_rate=1e-3, feat
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-4)
 
     criterion = nn.CrossEntropyLoss()
     train_dataset = classifier_dataset(features, labels)

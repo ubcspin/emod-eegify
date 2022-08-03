@@ -125,17 +125,20 @@ def filter_normalize_crop(eeg: np.array, ft: np.array) -> tuple:
     raw.set_montage(montage)
     raw.set_channel_types({'E62': 'eog'})
     raw.drop_channels('Cz')
+    
     # notch 60Hz
     raw.notch_filter(np.arange(60, 301, 60), filter_length='auto', phase='zero') # make filter non-causal to remove phase
 
-    # EOG artifact removal through ICA (eye blinking removal)
-    ica = ICA(n_components=15)
-    ica.fit(raw)
-    ica.plot_components(show=False)
+    raw.filter(l_freq=0.5, h_freq=100, filter_length='auto', phase='zero') # apply bandpass filter
 
-    eog_indices, eog_scores = ica.find_bads_eog(raw, ch_name='E62', measure='correlation', threshold=0.5)
-    ica.exclude = eog_indices
-    ica.apply(raw)
+    # EOG artifact removal through ICA (eye blinking removal)
+    # ica = ICA(n_components=15)
+    # ica.fit(raw)
+    # ica.plot_components(show=False)
+
+    # eog_indices, eog_scores = ica.find_bads_eog(raw, ch_name='E62', measure='correlation', threshold=0.5)
+    # ica.exclude = eog_indices
+    # ica.apply(raw)
     
     new_eeg = eeg[:,:-1] # drop last channel
     new_eeg[:, 1:] = raw.get_data().transpose()
