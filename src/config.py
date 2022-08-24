@@ -1,0 +1,12 @@
+TIME_INDEX = 'timedelta'
+TIME_INTERVAL = '5s'
+
+MAX_FEELTRACE = 250
+
+FS = 1000
+SAMPLE_PERIOD = '1ms'
+
+WINDOW_TYPE = 'hann'
+WINDOW_SIZE = 5
+
+DEBUG = True

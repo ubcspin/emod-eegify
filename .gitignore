@@ -132,3 +132,7 @@ dmypy.json
 *.mat
 *.csv
 participant/p*
+prev_data
+results
+
+.DS_Store
