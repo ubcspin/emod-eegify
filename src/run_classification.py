@@ -1,13 +1,11 @@
 
-# EEG Model Training Notebook
+# EEG Model Training
 # 
-# This notebook contains the model training pipeline used for EEG classification. An overview of this notebook is as follows
+# This script contains the model training pipeline used for EEG classification. An overview is as follows
 # 
 # 1. Training/Testing dataset creation
-# 2.Simple Classifier
-# 3. Overall Results
-
-# import some useful libraries
+# 2. CNN Classifier
+# 3. Write To csv
 
 import os
 import glob
@@ -34,9 +32,6 @@ from tqdm.auto import tqdm
 # timer
 import time
 
-# kalman filter
-from filterpy.common import Q_discrete_white_noise
-from filterpy.kalman import KalmanFilter
 
 # Training/Testing dataset creation
 # functions for preprocessing dataset
@@ -58,15 +53,15 @@ def load_dataset(dir = 'feeltrace', subject_num = 5):
     # return signal
     return data_signal
 
-def generate_label(eeg_ft, split_size=100, k=5, label_type='angle', num_classes=3, kf=False, R=1e3, var=1e3, p=1e3, overlap=0.5):
+def generate_label(eeg_ft, split_size=100, k=5, label_type='angle', num_classes=3, overlap=0.5):
     # split into windows (with overlap %)
     dataset = [eeg_ft[x : x + split_size] for x in range(0, len(eeg_ft), int(split_size * (1.0-overlap)))]
     dataset = [x for x in dataset if len(x) == split_size] # remove last windows if they are smaller than the rest
 
     if label_type != 'both':
-        labels, raw_label = get_label(dataset, n_labels=num_classes, label_type=label_type, kf=kf, dt=split_size/1000, R=R, var=var, p=p) # (N, 1)
+        labels, raw_label = get_label(dataset, n_labels=num_classes, label_type=label_type) # (N, 1)
     else:
-        labels, raw_label = get_combined_label(dataset, n_labels=int(np.sqrt(num_classes))) # (N, 1)
+        raise ValueError(f'Unexpected Label Type: {label_type}')
 
     dataset = generate_eeg_features(dataset)
     dataset = np.vstack([np.expand_dims(x,0) for x in dataset]) # (N, eeg_feature_size, 64)
@@ -78,51 +73,17 @@ def generate_label(eeg_ft, split_size=100, k=5, label_type='angle', num_classes=
     return dataset, labels, indices, raw_label
 
 
-def apply_kalman(raw_label, dt=1e-3, R=1e2, var=1e2, p=1e2):
-    kf = KalmanFilter(dim_x=2, dim_z=1)
-
-    kf.x = np.array([[0.5],
-                [0.]])       # initial state (location and angle)
-
-    kf.F = np.array([[1.,dt],
-                [0.,1.]])    # state transition matrix
-
-    kf.H = np.array([[1.,1.]])    # Measurement function
-    kf.P = np.array([[p,    0.],
-                [   0., p] ])               # covariance matrix
-    kf.R = R                      # state uncertainty
-    kf.Q = Q_discrete_white_noise(dim=2, dt=dt, var=var) # process uncertainty
-
-    kf_signal = np.zeros_like(raw_label)
-    for i,m in enumerate(raw_label):
-        kf.predict() # predict
-        kf.update(m) # measure
-        x = np.clip(kf.x[0], 0,1)
-        kf_signal[i] = x
-    return kf_signal
-
-def get_label(data, n_labels=3, label_type='angle', kf=False, dt=1e-3, R=1e3, var=1e3, p=1e3):
+def get_label(data, n_labels=3, label_type='angle'):
     if label_type == 'angle':
         labels = stress_2_angle(np.vstack([x[:,1].T for x in data])) # angle/slope mapped to [0,1] in a time window
     elif label_type == 'pos':
         labels = np.vstack([x[:,1].mean() for x in data]) # mean value within the time window
     else:
         labels = stress_2_accumulator(np.vstack([x[:,1].T for x in data])) # accumulator mapped to [0,1] in a time window
-
-    if kf:
-        labels = apply_kalman(labels, dt, R=R, var=var, p=p)
         
     label_dist = stress_2_label(labels, n_labels=n_labels).squeeze()
     return label_dist, labels.squeeze()
 
-def get_combined_label(data, n_labels=3):
-    angle_labels, _ = get_label(data, n_labels=n_labels, label_type='angle') # (N, 1)
-    pos_labels, _ = get_label(data, n_labels=n_labels, label_type='pos') # (N, 1)
-
-    labels = [x for x in range(n_labels)]
-    labels_dict =  {(a, b) : n_labels*a+b for a in labels for b in labels} # cartesian product
-    combined_labels = [labels_dict[(pos, angle)] for (pos, angle) in zip(pos_labels, angle_labels)]
-    return np.array(combined_labels)
 
 
 def stress_2_label(mean_stress, n_labels=5):
@@ -149,15 +110,13 @@ def stress_2_accumulator(stress_windows):
     integral = np.trapz(stress_windows, x=xvals)
     return integral/max_area # map to [0,1]
 
-def split_dataset(labels, k=5, strat=True):
+def split_dataset(labels, k=5):
     '''
     split the features and labels into k groups for k fold validation
     we use StratifiedKFold to ensure that the class distributions within each sample is the same as the global distribution
     '''
-    if strat:
-        kf = StratifiedKFold(n_splits=k, shuffle=True)
-    else:
-        kf = KFold(n_splits=k, shuffle=True)
+    
+    kf = StratifiedKFold(n_splits=k, shuffle=True)
 
     # only labels are required for generating the split indices so we ignore it
     temp_features = np.zeros_like(labels)
@@ -180,7 +139,7 @@ def generate_eeg_features(dataset):
 
         freq_res = freqs[1] - freqs[0]
         band_powers = np.array([sp.integrate.simpson(psd[idx,:], dx=freq_res, axis=0) for idx in idx_bands]) # (5,64)
-        total_powers = np.array([sp.integrate.simpson(psd, dx=freq_res, axis=0) for idx in idx_bands]) # (5,64)
+
         normed_powers = band_powers
         diff_entropy = np.log(normed_powers)
         # (5, 1, 64)
@@ -209,9 +168,8 @@ class classifier(nn.Module):
         self.classify = nn.Sequential(
             nn.Flatten(),
             nn.Dropout(p=dropout),
-            nn.Linear(64* 64 * 8, 256),
-            nn.ReLU(),
-            nn.Linear(256, self.n_classes))
+            nn.Linear(64* 64 * 8, self.n_classes)
+            )
     
     def forward(self,x):
         x = self.cnn(x)
@@ -314,34 +272,26 @@ def train_classifier(model, num_epochs=5, batch_size=1, learning_rate=1e-3, feat
         
         
         train_metrics.append([cur_train_acc, cur_train_pc, cur_train_rc, cur_train_f1, cur_train_loss])
-            
-        # print(f'Epoch:{epoch+1},'\
-        #       f'\nTrain Loss:{cur_train_loss},'\
-        #       f'\nTrain Accuracy:{cur_train_acc},'\
-        #       f'\nTrain Recall: {cur_train_rc},'\
-        #       f'\nTrain precision: {cur_train_pc},' \
-        #       f'\nTrain F1-Score:{cur_train_f1},')
         
     return train_metrics
         
 
-def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3, overlap=0.5):
+def main_runner(subject_choice=1, label_type='angle', overlap=0.5, window_size=500):
 
     dir = '../eeg_feeltrace' # directory containing *.csv files
     # hyper parameters
-    window_size = 500 # must be an int in milliseconds
+    #window_size must be an int in milliseconds
     subject_num = subject_choice # which subject to choose [1-16]
     k_fold = 5 # k for k fold validation
-    apply_kf = False # apply kalman filter
-    num_classes = 3 if label_type != 'both' else 9 # number of classes to discretize the labels into
+    num_classes = 3 # number of classes to discretize the labels into
     num_features = 64 # eeg feature size
     classifier_learning_rate = 1e-3 # adam learning rate
-    classifier_train_epochs = 10 # train classifier duration
+    classifier_train_epochs = 30 # train classifier duration
     classifier_hidden = 8 # classifier parameter, the larger the more complicated the model
 
 
     eeg_ft_signal = load_dataset(dir = dir, subject_num = subject_num)
-    eeg_features, labels, indices, kf_raw_label = generate_label(eeg_ft_signal.values, split_size=window_size, k=k_fold, label_type=label_type, num_classes=num_classes, kf=apply_kf, R=R, var=var, p=p, overlap=overlap)
+    eeg_features, labels, indices, raw_label = generate_label(eeg_ft_signal.values, split_size=window_size, k=k_fold, label_type=label_type, num_classes=num_classes, overlap=overlap)
 
     print(f"Label class bincount: {np.bincount(labels, minlength=num_classes)}")
     
@@ -358,7 +308,6 @@ def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3, ove
 
         print('Training Classifier!')
         classifier_train_metrics = train_classifier(classifier_model, classifier_train_epochs, batch_size=128, learning_rate=classifier_learning_rate, features=encoded_train_features, labels=labels[train_index], num_classes=num_classes)
-
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         test_features, test_labels =  eeg_features[test_index], labels[test_index]
@@ -392,28 +341,26 @@ def main_runner(subject_choice=1, label_type='angle', R=1e3, var=1e3, p=1e3, ove
 
 def run():
     subjects = [(x+1) for x in range(16)]
-
-    R=1e3 # state uncertainty
-    var=1e-1 # process uncertainty
-    p=1e2 # covariance matrix parameter
     overlap=0.0 # overlap ratio
+    window_sizes = [500, 1000, 1500, 2000] # in ms
+    label_types = ['pos', 'angle']
 
-
+    variables = [(x, y) for x in label_types for y in window_sizes]
+    
     t0 = time.time()
     
-    label_type = 'pos'
-    result_list_1 = np.vstack([main_runner(subject, label_type, R=R, var=var, p=p, overlap=overlap) for subject in tqdm(subjects)])
-    label_type = 'angle'
-    result_list_2 = np.vstack([main_runner(subject, label_type, R=R, var=var, p=p, overlap=overlap) for subject in tqdm(subjects)])
-    label_type = 'accumulator'
-    result_list_3 = np.vstack([main_runner(subject, label_type, R=R, var=var, p=p, overlap=overlap) for subject in tqdm(subjects)])
+    result_list = []
+    for subject in tqdm(subjects):
+        for label_type, window_size in variables:
+            run_result = main_runner(subject, label_type=label_type, overlap=overlap, window_size=window_size)
+            result_list.append(run_result)
 
-    result_list = np.vstack([result_list_1, result_list_2, result_list_3])
+
     t1 = time.time()
     print(f"Total time (s): {t1-t0}")
 
     result_df = pd.DataFrame(result_list, columns=['Participant', 'Class 1', 'Class 2', 'Class 3', 'Label Type', 'Window [ms]', 'Overlap', 'Modality', 'Recall', 'Precision', 'F1-Score', 'STDEV Recall', 'STDEV Precision', 'STDEV F1-Score'])
-    result_df.to_csv('eeg_classification_result_simple_cnn_11.csv', index=False)
+    result_df.to_csv('eeg_classification_2022_08_22_run_01.csv', index=False)
 
 
 if __name__ == '__main__':
