@@ -160,7 +160,7 @@ def train_participant(feature_dict, label_dict, params=PARAMS, label_types=LABEL
 
             fold_results[str(fold)] = {'y': y, 'y_hat': y_hat}
         results[label_type] = pd.DataFrame(fold_results)
-    return pd.DataFrame(results)
+    return results
 
 
 if __name__ == '__main__':

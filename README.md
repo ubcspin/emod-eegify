@@ -15,12 +15,10 @@ Code for analyzing EEG collected during the EEG study. Protocol discussion: _Cho
 These are the set of modules used for classification of EEG signals using emotion labels
 
 ## Guide
-1. unzip trial_data_split-anon.zip from the server into the a folder such as data/trial_data_split-anon (should contain .csv files)
-2. Run the following functions from the terminal
+1. unzip trial_data_split-anon.zip into the a folder such as data/trial_data_split-anon (should contain .csv files)
+2. Run the following functions from the terminal in the src directory
     - ```read_data.py```: to generate pickle files (*subject_data.pk*)
     - ```clean_data.py```: to adjust the sampling rate to 1000 Hz, apply filters to eeg and generate merged pickle files (*merged_data.pk*)
     - ```calculate_features.py```: calculate the eeg features and save the features by participant, i.e *p06_featurized_data.pk*
     - ```calculate_labels.py```: calculate the set of labels and save them by participant, i.e *p06_labels.pk*
-
-From the src directory run ```python3 generate_eeg_feeltrace.py``` or ```python generate_eeg_feeltrace.py``` on non unix machines. This will create the csv files for each subject and will take some time since the dataset is large (~5GB)
-- The csv files containing the eeg and feeltrace signals are located in 'eeg_feeltrace' by default
+    - ```train.py```: read through every *_featurized_data.pk* and *_labels.pk* and train an independent model for each participant and save the results in *_results.pk*
