@@ -19,7 +19,8 @@ These are the set of modules used for classification of EEG signals using emotio
 2. Run the following functions from the terminal
     - ```read_data.py```: to generate pickle files (*subject_data.pk*)
     - ```clean_data.py```: to adjust the sampling rate to 1000 Hz, apply filters to eeg and generate merged pickle files (*merged_data.pk*)
-    - ```calculate_features.py```:
+    - ```calculate_features.py```: calculate the eeg features and save the features by participant, i.e *p06_featurized_data.pk*
+    - ```calculate_labels.py```: calculate the set of labels and save them by participant, i.e *p06_labels.pk*
 
 From the src directory run ```python3 generate_eeg_feeltrace.py``` or ```python generate_eeg_feeltrace.py``` on non unix machines. This will create the csv files for each subject and will take some time since the dataset is large (~5GB)
 - The csv files containing the eeg and feeltrace signals are located in 'eeg_feeltrace' by default

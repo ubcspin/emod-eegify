@@ -1,11 +1,13 @@
 import os
+from tabnanny import verbose
 import mne
 import utils
 
 import pandas as pd
 import numpy as np
 
-from config import TIME_INDEX, TIME_INTERVAL, FS, SAMPLE_PERIOD, MAX_FEELTRACE
+from config import DEBUG, FS, SAMPLE_PERIOD, MAX_FEELTRACE
+from tqdm import tqdm
 
 INPUT_PICKLE_FILE = True
 INPUT_DIR = 'COMBINED_DATA'
@@ -27,7 +29,7 @@ def parse_data(subject_data: dict, file_order=FILE_ORDER):
     cols = ['timestamps', 'feeltrace'] + channel_names
     order = {v: i for i, v in enumerate(file_order)}
 
-    for pnum in subject_data.keys():
+    for pnum in tqdm(subject_data.keys()):
         utils.logger.info(f'Parsing data for {pnum}')
 
         subject_data[pnum].sort(key=lambda x: order[x['filename']])
@@ -35,41 +37,39 @@ def parse_data(subject_data: dict, file_order=FILE_ORDER):
         subject_data_iter = iter(subject_data[pnum])
 
         df = pd.DataFrame.from_dict(next(subject_data_iter)['df'])
+        
+        df['timestamps'] = pd.to_datetime(df.timestamps, unit='ms').astype('datetime64[ms]')
 
-        for subject in tqdm(subject_data_iter):
+        for subject in subject_data_iter:
             subject_df = subject['df']
-            df = pd.merge_ordered(df, subject_df, on='timestamps', suffixes=(
-                None, '_' + subject['filename'].split('.')[0]))
+
+            utils.logger.info(f'Fix sampling to {FS}Hz')
+            subject_df['timestamps'] =  pd.to_datetime(subject_df.timestamps, unit='ms').astype('datetime64[ms]')
+            subject_df = subject_df.set_index('timestamps').resample(SAMPLE_PERIOD, origin='start')
+            
+            utils.logger.info('Filling NaNs')
+            subject_df = subject_df.ffill() # fill nan values with the previous valid value
+            subject_df.reset_index(inplace=True)
+
+            df = pd.merge(df, subject_df, on='timestamps')
+        
         df['pnum'] = pnum
+        df['timestamps'] = df.timestamps.astype('int64') / 1e9
 
         utils.logger.info('Sorting DataFrame')
         df.sort_values(by='timestamps', inplace=True)
         df.reset_index(inplace=True, drop=True)
 
-        utils.logger.info('Filling NaNs')
-        df[cols] = df[cols].bfill().ffill()
-        df = df[~df.timestamps.duplicated()]
-
-
-       
-        # utils.logger.info('Creating combined keypress keys')
-        # fsr_cols = list(map(lambda x: 'a' + str(x), range(5)))
-        # df['a5'] = np.sum(df[fsr_cols], axis=1)
-        # df['a6'] = np.max(df[fsr_cols], axis=1)
-
-        utils.logger.info('Fix sampling to {FS}Hz')
-        df['timedelta'] = pd.TimedeltaIndex(df.timestamps, unit='ms')
-        df = df.set_index('timedelta').resample(SAMPLE_PERIOD).nearest()
-        df.reset_index(inplace=True, drop=False)
-        df['timestamps'] = df.timedelta.astype('int64') / 1e9
+        df['timedelta'] = pd.TimedeltaIndex(df.timestamps, unit='s')
 
         utils.logger.info('Scaling feeltrace to 0-1 range')
         df.loc[:, df.columns.str.contains(
             'feeltrace')] = df.loc[:, df.columns.str.contains('feeltrace')] / MAX_FEELTRACE
 
-
         # eeg functions
         ch_types = 'eeg'
+        verbose = 'DEBUG' if DEBUG else 'WARNING'
+        mne.set_log_level(verbose=verbose)
         info = mne.create_info(channel_names, FS, ch_types)
         # load eeg into mne package
         montage = mne.channels.make_standard_montage('GSN-HydroCel-65_1.0')
@@ -81,7 +81,7 @@ def parse_data(subject_data: dict, file_order=FILE_ORDER):
         utils.logger.info('Applying bandpass (0.5Hz to 50Hz) to EEG')
         raw.filter(l_freq=0.5, h_freq=50, filter_length='auto', phase='zero') # apply bandpass filter, no phase so non-causal
         
-        df.drop(columns=[channel_names[-1]])
+        df.drop(columns=[channel_names[-1]], inplace=True)
         df[channel_names[:-1]] = raw.get_data().transpose()
 
         merged_data[pnum] = df
