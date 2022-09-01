@@ -11,4 +11,4 @@ WINDOW_SIZE = 500 # ms
 
 LABEL_CLASS_COUNT = 3
 
-DEBUG = False
+DEBUG = True
