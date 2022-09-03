@@ -210,7 +210,7 @@ def train_participant(features, label_dict, params=PARAMS, label_types=LABEL_TYP
             train_index, test_index = indices[fold]
 
 
-            lstm_train_X, encoder_X, lstm_y, _ = train_test_split(features[train_index], labels[train_index], test_size=params['encoder_split'], stratify=labels[train_index]) 
+            lstm_train_X, encoder_X, lstm_y, _ = train_test_split(features[train_index], labels[train_index], test_size=params['encoder_split']) 
 
             encoder_model =  autoencoder(num_features=params['encoder_features'])
             classifier_model = lstm_classifier(num_features=params['encoder_features'], dropout=params['lstm_dropout'], n_labels=params['num_classes'])
