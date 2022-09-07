@@ -28,7 +28,7 @@ SAVE_PICKLE_FILE = True
 OUTPUT_DIR = 'COMBINED_DATA'
 OUTPUT_PICKLE_NAME = 'eeg_lstm_results.pk'
 
-LABEL_TYPES = ['pos', 'angle']
+LABEL_TYPES = ['pos', 'angle', 'acc']
 
 
 
