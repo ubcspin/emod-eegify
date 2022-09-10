@@ -35,7 +35,7 @@ def train(model, features=None, labels=None, params=PARAMS):
     model.to(device)
     
     if params['optimizer'] == 'AdamW':
-        optimizer = torch.optim.AdamW(model.parameters(), lr=params['lstm_classifier_learning_rate'], weight_decay=params['weight_decay'])
+        optimizer = torch.optim.AdamW(model.parameters(), lr=params['classifier_learning_rate'], weight_decay=params['weight_decay'])
     else:
         raise ValueError(f'Unexpected value for optimizer parameter: {params}')
     

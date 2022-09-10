@@ -168,9 +168,7 @@ PARAMS = {
     'batch_size': 128, # training batch size
     'weight_decay': 1e-4, # L2 regularization for AdamW optimizer
     'loss': 'cross_entropy', # loss function
-    'lstm_classifier_learning_rate': 1e-4, # AdamW learning rate
     'encoder_train_epochs': 15, 
     'encoder_features': 12, # number of features in latent space
-    'encoder_learning_rate': 1e-3, # AdamW learning rate
     'encoder_split': 0.4 # % of training data to use for training the encoder
 }
