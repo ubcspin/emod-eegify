@@ -17,16 +17,17 @@ SAVE_PICKLE_FILE = True
 OUTPUT_DIR = 'COMBINED_DATA'
 OUTPUT_PICKLE_NAME = 'merged_data.pk'
 
+
 FILE_ORDER = [
     'eeg.csv',
-    'joystick.csv'
+    'joystick.csv',
+    'calibrated_words.csv'
 ]
-
 
 def parse_data(subject_data: dict, file_order=FILE_ORDER):
     merged_data = {}
     channel_names = [ 'E' + str(i+1) for i in range(64)] + ['Cz']
-    cols = ['timestamps', 'feeltrace'] + channel_names
+    cols = ['timestamps', 'feeltrace', 'calibrated_values'] + channel_names
     order = {v: i for i, v in enumerate(file_order)}
 
     for pnum in tqdm(subject_data.keys()):
@@ -66,6 +67,10 @@ def parse_data(subject_data: dict, file_order=FILE_ORDER):
         df.loc[:, df.columns.str.contains(
             'feeltrace')] = df.loc[:, df.columns.str.contains('feeltrace')] / MAX_FEELTRACE
 
+        utils.logger.info('Scaling calibrated values to 0-1 range')
+        df.loc[:, df.columns.str.contains(
+            'calibrated_values')] = ((df.loc[:, df.columns.str.contains('calibrated_values')] + 10) * 10) / MAX_FEELTRACE
+
         # eeg functions
         ch_types = 'eeg'
         verbose = 'DEBUG' if DEBUG else 'WARNING'
@@ -78,8 +83,8 @@ def parse_data(subject_data: dict, file_order=FILE_ORDER):
         raw.set_channel_types({'E62': 'eog'})
         raw.drop_channels('Cz') # drop reference channel
 
-        utils.logger.info('Applying bandpass (0.5Hz to 50Hz) to EEG')
-        raw.filter(l_freq=0.5, h_freq=50, filter_length='auto', phase='zero') # apply bandpass filter, no phase so non-causal
+        utils.logger.info('Applying bandpass (1Hz to 50Hz) to EEG')
+        raw.filter(l_freq=1, h_freq=50, filter_length='auto', phase='zero') # apply bandpass filter, no phase so non-causal
         
         df.drop(columns=[channel_names[-1]], inplace=True)
         df[channel_names[:-1]] = raw.get_data().transpose()
@@ -93,8 +98,7 @@ if __name__ == "__main__":
     if INPUT_PICKLE_FILE:
         input_pickle_file_path = os.path.join(INPUT_DIR, INPUT_PICKLE_NAME)
         subject_data = utils.load_pickle(input_pickle_file_path)
-
-    merged_data = parse_data(subject_data)
+        merged_data = parse_data(subject_data)
 
     if SAVE_PICKLE_FILE:
         output_pickle_file_path = os.path.join(OUTPUT_DIR, OUTPUT_PICKLE_NAME)
