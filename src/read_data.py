@@ -15,7 +15,7 @@ FILES_DICT = {
     "calibrated_words.csv": ['timestamps', 'calibrated_words', 'calibrated_values']
 }
 
-RAW_DATA_PATH = '../data/trial_data_split-anon'
+RAW_DATA_PATH = 'feel'
 OUTPUT_DIR = 'COMBINED_DATA'
 OUTPUT_PICKLE_NAME = 'subject_data.pk'
 SAVE_PICKLE_FILE = True
