@@ -10,12 +10,11 @@ from tqdm import tqdm
 # Filenames and columns
 FILES_DICT = {
     "eeg.csv": ['timestamps'] + [ 'E' + str(i+1) for i in range(64)] + ['Cz'],
-    "fsr.csv": ['timestamps', 'a0', 'a1', 'a2', 'a3', 'a4'],
     "joystick.csv": ['timestamps', 'feeltrace'],
     "calibrated_words.csv": ['timestamps', 'calibrated_words', 'calibrated_values']
 }
 
-RAW_DATA_PATH = '../data/trial_data_split-anon'
+RAW_DATA_PATH = 'feel'
 OUTPUT_DIR = 'COMBINED_DATA'
 OUTPUT_PICKLE_NAME = 'subject_data.pk'
 SAVE_PICKLE_FILE = True
