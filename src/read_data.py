@@ -62,18 +62,7 @@ def parse_files(subject_files: list, file_dict=FILES_DICT):
         utils.logger.info(f'Reading {filename}')
 
         x = pd.read_csv(file, names=file_dict[filename], header=0, low_memory=False)
-
-        if 'calibrated' in filename:
-            calibrated_words[x.columns] = x.values
-            if 'timestamp' in filename:
-                subject_data.append({
-                    'filename': 'calibrated_words.csv',
-                    'df': calibrated_words
-                })
-            else:
-                continue
-        else:
-            subject_data.append({'filename': filename, 'df': x})
+        subject_data.append({'filename': filename, 'df': x})
 
     return subject_data
 
