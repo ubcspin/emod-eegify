@@ -31,7 +31,7 @@ def calculate_labels_per_participant(df, time_index=TIME_INDEX, time_interval=TI
     df = df.assign(window_id=df.groupby(pd.Grouper(key=time_index, freq=time_interval)).ngroup())
 
     if columns is None:
-        columns = ['window_id'] + ['feeltrace'] + ['calibrated_words']
+        columns = ['window_id'] + ['continuous_annotation'] + ['calibrated_words']
 
     grouped_data = df[columns].groupby('window_id').apply(np.array).to_numpy()
     windows = []

@@ -2,13 +2,8 @@
 Modified from: https://gist.github.com/DimaK415/428bbeb0e79551f780bb990e7c26f813
 """
 # Import modules for feature engineering and modelling
-
-from sklearn.model_selection import cross_validate
-from sklearn.model_selection import StratifiedKFold, KFold, RandomizedSearchCV
+from sklearn.model_selection import KFold, RandomizedSearchCV
 from hiclass2 import LocalClassifierPerParentNode
-
-from imblearn.over_sampling import RandomOverSampler
-from imblearn.pipeline import make_pipeline
 
 from config import CV_SPLITS
 import utils

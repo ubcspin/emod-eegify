@@ -6,7 +6,7 @@ import utils
 import pandas as pd
 import numpy as np
 
-from config import DEBUG, FS, SAMPLE_PERIOD, MAX_FEELTRACE
+from config import DEBUG, FS, SAMPLE_PERIOD, MAX_CONTINUOUS_ANNOTATION
 from tqdm import tqdm
 
 INPUT_PICKLE_FILE = True
@@ -27,7 +27,7 @@ FILE_ORDER = [
 def parse_data(subject_data: dict, file_order=FILE_ORDER):
     merged_data = {}
     channel_names = [ 'E' + str(i+1) for i in range(64)] + ['Cz']
-    cols = ['timestamps', 'feeltrace', 'calibrated_values'] + channel_names
+    cols = ['timestamps', 'continuous_annotation', 'calibrated_values'] + channel_names
     order = {v: i for i, v in enumerate(file_order)}
 
     for pnum in tqdm(subject_data.keys()):
@@ -63,13 +63,13 @@ def parse_data(subject_data: dict, file_order=FILE_ORDER):
 
         df['timedelta'] = pd.TimedeltaIndex(df.timestamps, unit='s')
 
-        utils.logger.info('Scaling feeltrace to 0-1 range')
+        utils.logger.info('Scaling continuous_annotation to 0-1 range')
         df.loc[:, df.columns.str.contains(
-            'feeltrace')] = df.loc[:, df.columns.str.contains('feeltrace')] / MAX_FEELTRACE
+            'continuous_annotation')] = df.loc[:, df.columns.str.contains('continuous_annotation')] / MAX_CONTINUOUS_ANNOTATION
 
         utils.logger.info('Scaling calibrated values to 0-1 range')
         df.loc[:, df.columns.str.contains(
-            'calibrated_values')] = ((df.loc[:, df.columns.str.contains('calibrated_values')] + 10) * 10) / MAX_FEELTRACE
+            'calibrated_values')] = ((df.loc[:, df.columns.str.contains('calibrated_values')] + 10) * 10) / MAX_CONTINUOUS_ANNOTATION
 
         # eeg functions
         ch_types = 'eeg'

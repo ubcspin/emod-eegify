@@ -56,7 +56,7 @@ class cnn_classifier_dataset(torch.utils.data.Dataset):
 OPTIMIZER = torch.optim.AdamW
 LR = 1e-4
 MAX_EPOCHS = 5
-CRITERION = nn.NLLLoss
+CRITERION = nn.CrossEntropyLoss
 BATCH_SIZE = 2048
 
 # device
@@ -65,7 +65,7 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 MODELS = {
     'CNN': NeuralNetClassifier(module=cnn_classifier,
         module__dropout=0.25,
-        module__n_labels=3,
+        module__n_labels=LABEL_CLASS_COUNT,
         optimizer=OPTIMIZER,
         lr=LR,
         max_epochs=MAX_EPOCHS,
