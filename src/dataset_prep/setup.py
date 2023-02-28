@@ -25,6 +25,7 @@ OUTPUT_DIR = 'COMBINED_DATA'
 OUTPUT_PICKLE_NAME = 'subject_data.pk'
 SAVE_PICKLE_FILE = True
 
+print("Reading data...")
 read_data.run(RAW_DATA_PATH, OUTPUT_DIR, FILES_DICT, OUTPUT_PICKLE_NAME, SAVE_PICKLE_FILE)
 
 
@@ -44,6 +45,7 @@ FILE_ORDER = [
     'calibrated_words.csv'
 ]
 
+print("Cleaning data...")
 clean_data.run(INPUT_PICKLE_FILE, INPUT_DIR, INPUT_PICKLE_NAME, SAVE_PICKLE_FILE,
                OUTPUT_DIR, OUTPUT_PICKLE_NAME, FILE_ORDER, SAMPLE_PERIOD,
                FS, MAX_CONTINUOUS_ANNOTATION, DEBUG)
@@ -59,15 +61,20 @@ SAVE_PICKLE_FILE = True
 OUTPUT_DIR = 'COMBINED_DATA'
 OUTPUT_PICKLE_NAME = 'featurized_data.pk'
 
+
+print("Calculating features...")
 calculate_features.run(INPUT_PICKLE_FILE, INPUT_DIR, INPUT_PICKLE_NAME, SAVE_PICKLE_FILE,
         OUTPUT_DIR, OUTPUT_PICKLE_NAME, FS, TIME_INDEX, EXP_PARAMS)
 
 
 import calculate_labels
+print("Calculating labels...")
 calculate_labels.run()
 
 import calculate_validation
+print("Creating validation split...")
 calculate_validation.run()
 
 
+print("Done!")
 sys.path.remove(str(_parentdir))
