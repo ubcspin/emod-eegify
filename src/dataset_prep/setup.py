@@ -1,3 +1,10 @@
+import pathlib
+import sys
+
+_parentdir = pathlib.Path(__file__).parent.parent.resolve()
+sys.path.insert(0, str(_parentdir))
+
+
 import read_data
 import clean_data
 import calculate_features
@@ -61,3 +68,6 @@ calculate_labels.run()
 
 import calculate_validation
 calculate_validation.run()
+
+
+sys.path.remove(str(_parentdir))
