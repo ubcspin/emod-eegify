@@ -127,7 +127,7 @@ def stress_2_accumulator(stress_windows):
     return integral/max_area  # map to [0,1]
 
 
-if __name__ == '__main__':
+def run():
     if INPUT_PICKLE_FILE:
         input_pickle_file_path = os.path.join(INPUT_DIR, INPUT_PICKLE_NAME)
         merged_data = utils.load_pickle(

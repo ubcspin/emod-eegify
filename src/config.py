@@ -3,7 +3,7 @@ TIME_INTERVAL = '500ms'
 
 MAX_CONTINUOUS_ANNOTATION = 225
 
-FS = 1000
+FS = 1000 # sampling frequency in Hz
 SAMPLE_PERIOD = '1ms'
 
 WINDOW_TYPE = 'hamming'

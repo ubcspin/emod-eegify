@@ -6,7 +6,6 @@ import utils
 import pandas as pd
 import numpy as np
 
-from config import DEBUG, FS, SAMPLE_PERIOD, MAX_CONTINUOUS_ANNOTATION
 from tqdm import tqdm
 
 INPUT_PICKLE_FILE = True
@@ -24,7 +23,8 @@ FILE_ORDER = [
     'calibrated_words.csv'
 ]
 
-def parse_data(subject_data: dict, file_order=FILE_ORDER):
+def parse_data(subject_data: dict, file_order: list,
+               SAMPLE_PERIOD: str, FS: int, MAX_CONTINUOUS_ANNOTATION: int, DEBUG: bool):
     merged_data = {}
     channel_names = [ 'E' + str(i+1) for i in range(64)] + ['Cz']
     cols = ['timestamps', 'continuous_annotation', 'calibrated_values'] + channel_names
@@ -94,13 +94,18 @@ def parse_data(subject_data: dict, file_order=FILE_ORDER):
     return merged_data
 
 
-if __name__ == "__main__":
+def run(INPUT_PICKLE_FILE: bool, INPUT_DIR: str, INPUT_PICKLE_NAME: str,
+        SAVE_PICKLE_FILE: bool, OUTPUT_DIR: str, OUTPUT_PICKLE_NAME: str,
+        FILE_ORDER: list, SAMPLE_PERIOD: str, FS: int, MAX_CONTINUOUS_ANNOTATION: int, DEBUG: bool):
+    
     if INPUT_PICKLE_FILE:
-        input_pickle_file_path = os.path.join(INPUT_DIR, INPUT_PICKLE_NAME)
-        subject_data = utils.load_pickle(input_pickle_file_path)
-        merged_data = parse_data(subject_data)
+            input_pickle_file_path = os.path.join(INPUT_DIR, INPUT_PICKLE_NAME)
+            subject_data = utils.load_pickle(input_pickle_file_path)
+            merged_data = parse_data(subject_data, FILE_ORDER, SAMPLE_PERIOD, FS, MAX_CONTINUOUS_ANNOTATION, DEBUG)
 
     if SAVE_PICKLE_FILE:
         output_pickle_file_path = os.path.join(OUTPUT_DIR, OUTPUT_PICKLE_NAME)
         utils.pickle_data(data=merged_data,
                           file_path=output_pickle_file_path)
+
+

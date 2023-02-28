@@ -77,11 +77,10 @@ MODELS = {
         verbose=0)
 }
 
-
-
 PARAMS = {
 
     'CNN': {
-    'lr': [LR*0.1, LR*10]
+    'local_classifier__lr': [LR*0.1, LR,  LR*10],
+    'local_classifier__max_epochs' : [MAX_EPOCHS,  MAX_EPOCHS*2, MAX_EPOCHS*4]
     }
 }
