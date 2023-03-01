@@ -10,6 +10,7 @@ import clean_data
 import calculate_features
 
 from config import DEBUG, FS, SAMPLE_PERIOD, MAX_CONTINUOUS_ANNOTATION
+from config import TIME_INDEX, EXP_PARAMS, FS
 
 
 # Function to read in the data and save it as a pickle file
@@ -53,10 +54,8 @@ def clean():
                    OUTPUT_DIR, OUTPUT_PICKLE_NAME, FILE_ORDER, SAMPLE_PERIOD,
                    FS, MAX_CONTINUOUS_ANNOTATION, DEBUG)
 
-    from config import TIME_INDEX, EXP_PARAMS, FS
 
-
-def calculate_features():
+def calc_features():
     INPUT_PICKLE_FILE = True
     INPUT_DIR = 'COMBINED_DATA'
     INPUT_PICKLE_NAME = 'merged_data.pk'
@@ -71,12 +70,12 @@ def calculate_features():
             OUTPUT_DIR, OUTPUT_PICKLE_NAME, FS, TIME_INDEX, EXP_PARAMS)
 
 
-def calculate_labels():
+def calc_labels():
     import calculate_labels
     print("Calculating labels...")
     calculate_labels.run()
 
-def calculate_validation():
+def calc_validation():
     import calculate_validation
     print("Creating validation split...")
     calculate_validation.run()
@@ -85,8 +84,8 @@ def calculate_validation():
 if __name__ == "__main__":
     read()
     clean()
-    calculate_features()
-    calculate_labels()
-    calculate_validation()
+    calc_features()
+    calc_labels()
+    calc_validation()
     print("Done!")
     sys.path.remove(str(_parentdir))
