@@ -32,6 +32,34 @@ class cnn_classifier(nn.Module):
         x = torch.softmax(x, dim=1)
         return x
 
+class cnn_classifier_original(nn.Module):
+    def __init__(self, dropout=0.2, n_labels=3):
+        super(cnn_classifier_original, self).__init__()
+        
+        self.n_classes = n_labels
+
+
+        self.cnn = nn.Sequential(
+            nn.Conv2d(5, 32, 3, padding='same'),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Dropout(p=dropout),
+            nn.Conv2d(32, 16, 3, padding='same'),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+        )
+        
+        self.classify = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(16* 16 * 16, self.n_classes)
+            )
+    
+    def forward(self,x):
+        x = self.cnn(x)
+        x = self.classify(x)
+        x = torch.softmax(x, dim=1)
+        return x
+
 class cnn_classifier_dataset(torch.utils.data.Dataset):
     def __init__(self, features, labels):
         'Initialization'
@@ -58,13 +86,14 @@ LR = 1e-4
 MAX_EPOCHS = 5
 CRITERION = nn.CrossEntropyLoss
 BATCH_SIZE = 2048
+DROPOUT = 0.25
 
 # device
-DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+DEVICE = 'cuda' if not torch.cuda.is_available() else 'cpu'
 
 MODELS = {
-    'CNN': NeuralNetClassifier(module=cnn_classifier,
-        module__dropout=0.25,
+    'CNN': NeuralNetClassifier(module=cnn_classifier_original,
+        module__dropout=DROPOUT,
         module__n_labels=LABEL_CLASS_COUNT,
         optimizer=OPTIMIZER,
         lr=LR,
@@ -80,6 +109,7 @@ MODELS = {
 PARAMS = {
 
     'CNN': {
+    'local_classifier__batch_size': [128, 256, 512],
     'local_classifier__lr': [LR*0.1, LR,  LR*10],
     'local_classifier__max_epochs' : [MAX_EPOCHS,  MAX_EPOCHS*2, MAX_EPOCHS*4]
     }

@@ -1,5 +1,4 @@
 import os
-import utils
 
 import numpy as np
 import pandas as pd
@@ -7,18 +6,26 @@ import pandas as pd
 from calculate_de_features import calculate_de_features
 from tqdm import tqdm
 
+import pathlib
+import sys
+_parentdir = pathlib.Path(__file__).parent.parent.resolve()
+sys.path.insert(0, str(_parentdir))
+import utils
 from config import TIME_INDEX, TIME_INTERVAL, WINDOW_SIZE, EXP_PARAMS, FS
-
+sys.path.remove(str(_parentdir))
 
 INPUT_PICKLE_FILE = True
 INPUT_DIR = 'COMBINED_DATA'
-INPUT_PICKLE_NAME = 'merged_data.pk'
+INPUT_PICKLE_NAME = 'cleaned_data.pk'
 
 SAVE_PICKLE_FILE = True
 OUTPUT_DIR = 'COMBINED_DATA'
 OUTPUT_PICKLE_NAME = 'featurized_data.pk'
 
 COLUMNS = None
+
+SUBJECT_IDS = ['p02', 'p04', 'p05', 'p06', 'p07', 'p08', 'p09', 'p10', 'p12', 'p13', 'p15', 'p17', 'p19', 'p20', 'p22', 'p23']
+
 
 
 def calculate_features_per_participant(df, time_index=TIME_INDEX, time_interval=TIME_INTERVAL, columns=COLUMNS, window_size=WINDOW_SIZE, fs=FS):
@@ -54,9 +61,14 @@ def calculate_features_per_participant(df, time_index=TIME_INDEX, time_interval=
 
     return all_features
 
-def calculate_features(merged_data: dict):
+def calculate_features():
 
-    for pnum in tqdm(merged_data.keys()):
+    for pnum in tqdm(SUBJECT_IDS):
+        input_pickle_file_path = os.path.join(INPUT_DIR, f"{pnum}_" + INPUT_PICKLE_NAME)
+        merged_data = utils.load_pickle(
+            pickled_file_path=input_pickle_file_path)
+            
+
         utils.logger.info(f'Calculating features for {pnum}')
 
         window_sizes = EXP_PARAMS["WINDOW_SIZE"]
@@ -81,9 +93,4 @@ def calculate_features(merged_data: dict):
 
 if __name__ == '__main__':
     if INPUT_PICKLE_FILE:
-        input_pickle_file_path = os.path.join(INPUT_DIR, INPUT_PICKLE_NAME)
-        merged_data = utils.load_pickle(
-            pickled_file_path=input_pickle_file_path)
-            
-
-    calculate_features(merged_data)
+        calculate_features()

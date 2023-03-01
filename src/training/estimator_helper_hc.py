@@ -2,7 +2,7 @@
 Modified from: https://gist.github.com/DimaK415/428bbeb0e79551f780bb990e7c26f813
 """
 # Import modules for feature engineering and modelling
-from sklearn.model_selection import KFold, RandomizedSearchCV
+from sklearn.model_selection import KFold, GridSearchCV
 from hiclass2 import LocalClassifierPerParentNode
 
 from config import CV_SPLITS
@@ -34,11 +34,11 @@ class EstimatorSelectionHelper:
         if cv is None:
             cv = self.cv()
         for key in self.keys:
-            utils.logger.info("Running RandomizedSearchCV for %s." % key)
+            utils.logger.info("Running GridSearchCV for %s." % key)
 
             estimator = LocalClassifierPerParentNode(self.models[key], n_jobs=n_jobs, root_classes = self.root_classes, replace_classifiers=False)
 
-            rs = RandomizedSearchCV(estimator, self.params[key], cv=cv, scoring=scoring, n_jobs=n_jobs, return_train_score=True, refit=False).fit(X, y)
+            rs = GridSearchCV(estimator, self.params[key], cv=cv, scoring=scoring, n_jobs=n_jobs, return_train_score=True, refit=False).fit(X, y)
             self.random_searches[key] = rs
             print(rs)
 

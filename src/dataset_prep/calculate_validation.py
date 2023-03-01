@@ -1,13 +1,17 @@
 import os
-import utils
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 from sklearn.model_selection import ShuffleSplit
 
+import pathlib
+import sys
+_parentdir = pathlib.Path(__file__).parent.parent.resolve()
+sys.path.insert(0, str(_parentdir))
+import utils
 from config import EXP_PARAMS
-
+sys.path.remove(str(_parentdir))
 
 
 
@@ -25,8 +29,7 @@ SUBJECT_IDS = ['p02', 'p04', 'p05', 'p06', 'p07', 'p08', 'p09', 'p10', 'p12', 'p
 
 
 
-def run():
-
+if __name__ == "__main__":
     for window_size in EXP_PARAMS['WINDOW_SIZE']:
 
         train_labels = {}
