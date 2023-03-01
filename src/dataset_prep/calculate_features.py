@@ -10,8 +10,18 @@ from tqdm import tqdm
 from config import TIME_INDEX, TIME_INTERVAL, WINDOW_SIZE, EXP_PARAMS, FS
 
 
+INPUT_PICKLE_FILE = True
+INPUT_DIR = 'COMBINED_DATA'
+INPUT_PICKLE_NAME = 'merged_data.pk'
 
-def calculate_features_per_participant(df, time_index=TIME_INDEX, time_interval=TIME_INTERVAL, columns=None, window_size=WINDOW_SIZE, fs=FS):
+SAVE_PICKLE_FILE = True
+OUTPUT_DIR = 'COMBINED_DATA'
+OUTPUT_PICKLE_NAME = 'featurized_data.pk'
+
+COLUMNS = None
+
+
+def calculate_features_per_participant(df, time_index=TIME_INDEX, time_interval=TIME_INTERVAL, columns=COLUMNS, window_size=WINDOW_SIZE, fs=FS):
     df = df.assign(window_id=df.groupby(pd.Grouper( key=time_index, freq=time_interval)).ngroup())
 
     if columns is None:
@@ -44,9 +54,7 @@ def calculate_features_per_participant(df, time_index=TIME_INDEX, time_interval=
 
     return all_features
 
-def calculate_features(merged_data: dict,
-                       EXP_PARAMS: dict, SAVE_PICKLE_FILE: bool,
-                       OUTPUT_DIR: str, OUTPUT_PICKLE_NAME: str, FS: int, TIME_INDEX: str):
+def calculate_features(merged_data: dict):
 
     for pnum in tqdm(merged_data.keys()):
         utils.logger.info(f'Calculating features for {pnum}')
@@ -55,7 +63,7 @@ def calculate_features(merged_data: dict,
 
         for wsize in window_sizes:
             utils.logger.info(f'Calculating labels for window size: {wsize} ms')
-            features = calculate_features_per_participant(merged_data[pnum], time_interval=f"{wsize}ms", window_size=wsize, fs=FS, time_index=TIME_INDEX)
+            features = calculate_features_per_participant(merged_data[pnum], time_interval=f"{wsize}ms", window_size=wsize)
 
 
             participant_feature = {}
@@ -70,13 +78,12 @@ def calculate_features(merged_data: dict,
                           file_path=output_pickle_file_path)
 
 
-def run(INPUT_PICKLE_FILE: bool, INPUT_DIR: str, INPUT_PICKLE_NAME: str, SAVE_PICKLE_FILE: bool,
-        OUTPUT_DIR: str, OUTPUT_PICKLE_NAME: str, FS: int, TIME_INDEX: str,
-        EXP_PARAMS:  dict):
+
+if __name__ == '__main__':
     if INPUT_PICKLE_FILE:
         input_pickle_file_path = os.path.join(INPUT_DIR, INPUT_PICKLE_NAME)
         merged_data = utils.load_pickle(
             pickled_file_path=input_pickle_file_path)
             
 
-    calculate_features(merged_data, EXP_PARAMS, SAVE_PICKLE_FILE, OUTPUT_DIR, OUTPUT_PICKLE_NAME, FS, TIME_INDEX)
+    calculate_features(merged_data)

@@ -7,8 +7,19 @@ import pandas as pd
 
 from tqdm import tqdm
 
+# Filenames and columns
+FILES_DICT = {
+    "eeg.csv": ['timestamps'] + [ 'E' + str(i+1) for i in range(64)] + ['Cz'],
+    "joystick.csv": ['timestamps', 'continuous_annotation'],
+    "calibrated_words.csv": ['timestamps', 'calibrated_words', 'calibrated_values']
+}
 
-def read_dataset(src_dir, output_dir, file_dict):
+RAW_DATA_PATH = '../feel'
+OUTPUT_DIR = 'COMBINED_DATA'
+OUTPUT_PICKLE_NAME = 'subject_data.pk'
+SAVE_PICKLE_FILE = True
+
+def read_dataset(src_dir=RAW_DATA_PATH, output_dir=OUTPUT_DIR, file_dict=FILES_DICT):
     utils.logger.info(f'Reading data from {src_dir}')
 
     os.makedirs(output_dir, exist_ok=True)
@@ -34,7 +45,7 @@ def extract_pnum(filename: str):
     return 'p' + "%02d" % int(match.group(0))
 
 
-def parse_files(subject_files: list, file_dict):
+def parse_files(subject_files: list, file_dict=FILES_DICT):
     subject_data = []
     calibrated_words = pd.DataFrame()
 
@@ -56,8 +67,8 @@ def parse_files(subject_files: list, file_dict):
     return subject_data
 
 
-def run(RAW_DATA_PATH, OUTPUT_DIR, FILES_DICT, OUTPUT_PICKLE_NAME, SAVE_PICKLE_FILE):
-    subject_data = read_dataset(RAW_DATA_PATH, OUTPUT_DIR, FILES_DICT)
+if __name__ == "__main__":
+    subject_data = read_dataset(RAW_DATA_PATH)
 
     if SAVE_PICKLE_FILE:
         pickle_file_path = os.path.join(OUTPUT_DIR, OUTPUT_PICKLE_NAME)
