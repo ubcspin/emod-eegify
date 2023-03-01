@@ -132,7 +132,8 @@ if __name__ == '__main__':
                     results = train(train_features[subject_id], train_labels[subject_id], test_features[subject_id], test_labels[subject_id], pnum=subject_id)
 
                     if SAVE_PICKLE_FILE:
-                        iter_ = subject_id + "_" + str(i) + '_' + str(window_size) + 'ms_hc_cw_' + OUTPUT_PICKLE_NAME
+                        iter_ = subject_id + "_" + str(i) + '_' + str(window_size) + 'ms_hc_cw_' + OUTPUT_PICKLE_NAMEc
+                        os.makedirs(OUTPUT_DIR, exist_ok=True)
                         output_pickle_file_path = os.path.join(OUTPUT_DIR, iter_)
                         utils.pickle_data(data=results, file_path=output_pickle_file_path)
 

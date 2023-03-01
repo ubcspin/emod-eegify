@@ -111,6 +111,7 @@ if __name__ == '__main__':
 
                     if SAVE_PICKLE_FILE:
                         iter_ = subject_id + "_" + str(i) + '_' + str(window_size) + 'ms_hc_cw_' + OUTPUT_PICKLE_NAME
+                        os.makedirs(OUTPUT_DIR, exist_ok=True)
                         output_pickle_file_path = os.path.join(OUTPUT_DIR, iter_)
                         utils.pickle_data(data=training_results, file_path=output_pickle_file_path)
 
