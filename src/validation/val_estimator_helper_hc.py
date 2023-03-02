@@ -19,7 +19,7 @@ import mlflow
 
 class EstimatorSelectionHelper:
 
-    def __init__(self, models, params, root_classes=None):
+    def __init__(self, models, params, root_classes=None, key=None):
         if not set(models.keys()).issubset(set(params.keys())):
             missing_params = list(set(models.keys()) - set(params.keys()))
             raise ValueError(
@@ -29,6 +29,7 @@ class EstimatorSelectionHelper:
         self.keys = models.keys()
         self.root_classes = root_classes
         self.random_searches = {}
+        self.key = key
 
     def cv(self, n_splits=CV_SPLITS, random_state=None, shuffle=True):
         return KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
@@ -43,10 +44,10 @@ class EstimatorSelectionHelper:
             estimator = LocalClassifierPerParentNode(self.models[key], n_jobs=n_jobs, root_classes = self.root_classes, replace_classifiers=False)
 
             with mlflow.start_run():
+                mlflow.log_param("key", self.key)
                 estimator.fit(X, y)
             y_hat = estimator.predict(X_test)
             
-            input("Press Enter to continue...")
 
             rs = {}
             for fname, f in scoring.items():

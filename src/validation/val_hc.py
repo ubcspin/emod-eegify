@@ -40,8 +40,8 @@ LABEL_TYPES = [
 
 
 
-def fit_helper(X, y, X_test, y_test, models=None, params=PARAMS, n_jobs=-1, scoring={ "f1": metrics.f1, "prec" : metrics.precision, "recall": metrics.recall}, cw_classes=None):
-    helper = EstimatorSelectionHelper(models, params, cw_classes)
+def fit_helper(X, y, X_test, y_test, models=None, params=PARAMS, n_jobs=-1, scoring={ "f1": metrics.f1, "prec" : metrics.precision, "recall": metrics.recall}, cw_classes=None, key=None):
+    helper = EstimatorSelectionHelper(models, params, cw_classes, key=key)
     helper.fit(X, y,  X_test, y_test, scoring=scoring, n_jobs=n_jobs)
     try:
         scores = helper.score_summary(X_test, sort_by='f1')
@@ -101,7 +101,7 @@ def train(feature_dict, label_dict, test_feature_dict, test_label_dict,
         res['y_hc_' + label_type] = y_str
         res['y_hc_test_' + label_type] = y_str_test
 
-        helper, scores = fit_helper(X, y, X_test, y_test, MODELS[pnum + "_" + str(window_size) + "ms"], cw_classes=len(LE.classes_))
+        helper, scores = fit_helper(X, y, X_test, y_test, MODELS[pnum + "_" + str(window_size) + "ms"], cw_classes=len(LE.classes_), key=pnum + "_" + str(window_size) + "ms")
         res['scores_hc_' + label_type] = scores
         del helper
         del scores
