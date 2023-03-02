@@ -40,7 +40,7 @@ LABEL_TYPES = [
 
 
 
-def fit_helper(X, y, X_test, y_test, models=None, params=PARAMS, n_jobs=-1, scoring={ "f1": make_scorer(metrics.f1), "prec" : make_scorer(metrics.precision), "recall": make_scorer(metrics.recall)}, cw_classes=None):
+def fit_helper(X, y, X_test, y_test, models=None, params=PARAMS, n_jobs=-1, scoring={ "f1": metrics.f1, "prec" : metrics.precision, "recall": metrics.recall}, cw_classes=None):
     helper = EstimatorSelectionHelper(models, params, cw_classes)
     helper.fit(X, y,  X_test, y_test, scoring=scoring, n_jobs=n_jobs)
     try:
@@ -79,8 +79,10 @@ def train(feature_dict, label_dict, test_feature_dict, test_label_dict,
     Y = label_dict
     Y_test = test_label_dict
 
+    res = {}
+    res['pnum'] = pnum
     LE = LabelEncoder() # transform string to class values
-    LE.fit(np.vstack( (Y['cw_mode'], Y_test['cw_mode'])  ))
+    LE.fit(np.concatenate( (Y['cw_mode'], Y_test['cw_mode'])  ))
 
     y_cw_str = Y['cw_mode']
     y_cw = LE.transform(y_cw_str)
@@ -101,7 +103,6 @@ def train(feature_dict, label_dict, test_feature_dict, test_label_dict,
 
         helper, scores = fit_helper(X, y, X_test, y_test, MODELS[pnum + "_" + str(window_size) + "ms"], cw_classes=len(LE.classes_))
         res['scores_hc_' + label_type] = scores
-        res['pnum'] = pnum
         del helper
         del scores
 
@@ -109,7 +110,7 @@ def train(feature_dict, label_dict, test_feature_dict, test_label_dict,
 
 
 if __name__ == '__main__':
-    for i in range(100, 101):
+    for i in range(30):
         for window_size in EXP_PARAMS['WINDOW_SIZE']:
             if INPUT_PICKLE_FILE:
                 participant_results = {}

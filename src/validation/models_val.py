@@ -2,8 +2,11 @@ import torch.nn as nn
 import torch
 
 from skorch import NeuralNetClassifier
+from skorch.callbacks import MlflowLogger
 
 import numpy as np
+import pandas as pd
+import os
 
 from config import LABEL_CLASS_COUNT
 from config import EXP_PARAMS
@@ -105,21 +108,21 @@ def get_model(batch_size, lr, max_epochs, dropout, n_labels):
         train_split=None,
         device=DEVICE,
         callbacks=[
-                MLflowLogger() # log metrics to mlflow
+                MlflowLogger() # log metrics to mlflow
                 ],
         verbose=0)
 
-hps = pd.read_csv('hyperparams.csv')
+hps = pd.read_csv(os.path.join('validation','hyperparams.csv'), index_col=0)
 SUBJECT_IDS = ['p02', 'p04', 'p05', 'p06', 'p07', 'p08', 'p09', 'p10', 'p12', 'p13', 'p15', 'p17', 'p19', 'p20', 'p22', 'p23']
 
 MODELS = {}
 for window_size in EXP_PARAMS["WINDOW_SIZE"]:
         for subject_id in SUBJECT_IDS:
             id = subject_id + "_" + str(window_size) + "ms"
-            batch_size = hps[id]['local_classifier__batch_size']
+            batch_size = int(hps[id]['local_classifier__batch_size'])
             lr = hps[id]['local_classifier__lr']
-            max_epochs = hps[id]['local_classifier__max_epochs']
-            MODELS[id] = {"CNN" : get_model(batch_size, lr, epochs, DROPOUT, LABEL_CLASS_COUNT)}
+            max_epochs = int(hps[id]['local_classifier__max_epochs'])
+            MODELS[id] = {"CNN" : get_model(batch_size, lr, max_epochs, DROPOUT, LABEL_CLASS_COUNT)}
 
 
 
