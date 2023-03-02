@@ -22,7 +22,12 @@ The dataset consists of comma separated value (.csv) files organized by particip
 
 ## Getting Started
 1. unzip feel.zip and the subsequent zip files within: File structure should look like feel/p* where * is an integers(should contain .csv files)
-2. (optional)  Run ```read_feel_data.py```: to generate a single pickle file from the .csv files (*subject_data.pk*) for later processing
+2. run setup.py from the src directory to prepare the dataset for the model (ensure you have the correct path for the feel folder)
+3. run the train_hc.py from the src directory to run hyperparameter search
+4. run ```hyperparameter_results.py``` to create a csv of the hyperparameters in the validation folder
+5. run ```val_hc.py``` to validate the model on unseen data
+6. run ```validation_results.py``` to generate the validation results in the validation folder
+
 
 ## File descriptions
 - ```read_data.py```: utils to load CSV files and optionally save to a pickle file
