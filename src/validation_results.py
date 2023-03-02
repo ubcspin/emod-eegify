@@ -26,9 +26,9 @@ def get_validation_results():
                 if i == 0:
                     labels = res['y_hc_test_angle']
                     chance_metrics = calc_chance(labels, n=1000)
-                    chance_results[subject_id] = chance_metrics
+                    chance_results[subject_id + "_" + str(window_size)]  = chance_metrics
                 else:
-                    chance_metrics = chance_results[subject_id]
+                    chance_metrics = chance_results[subject_id + "_" + str(window_size)] 
 
                 item = [res['pnum'], window_size, i] + res['scores_hc_angle'].values.squeeze().tolist() + chance_metrics
                 results.append(item)
