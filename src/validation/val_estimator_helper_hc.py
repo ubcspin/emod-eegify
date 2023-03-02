@@ -13,6 +13,7 @@ import utils
 import numpy as np 
 import pandas as pd
 
+import mlflow
 
 
 
@@ -41,7 +42,8 @@ class EstimatorSelectionHelper:
 
             estimator = LocalClassifierPerParentNode(self.models[key], n_jobs=n_jobs, root_classes = self.root_classes, replace_classifiers=False)
 
-            estimator.fit(X, y)
+            with mlflow.start_run():
+                estimator.fit(X, y)
             y_hat = estimator.predict(X_test)
             
             input("Press Enter to continue...")

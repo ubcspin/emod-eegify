@@ -2,6 +2,9 @@ import torch.nn as nn
 import torch
 
 from skorch import NeuralNetClassifier
+from skorch.callbacks import EpochScoring
+
+import mlflow
 
 import numpy as np
 
@@ -24,6 +27,34 @@ class cnn_classifier(nn.Module):
             nn.Flatten(),
             nn.Dropout(p=dropout),
             nn.Linear(64* 64 * 8, self.n_classes)
+            )
+    
+    def forward(self,x):
+        x = self.cnn(x)
+        x = self.classify(x)
+        x = torch.softmax(x, dim=1)
+        return x
+
+class cnn_classifier_original(nn.Module):
+    def __init__(self, dropout=0.2, n_labels=3):
+        super(cnn_classifier_original, self).__init__()
+        
+        self.n_classes = n_labels
+
+
+        self.cnn = nn.Sequential(
+            nn.Conv2d(5, 32, 3, padding='same'),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Dropout(p=dropout),
+            nn.Conv2d(32, 16, 3, padding='same'),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+        )
+        
+        self.classify = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(16* 16 * 16, self.n_classes)
             )
     
     def forward(self,x):
@@ -57,32 +88,56 @@ OPTIMIZER = torch.optim.AdamW
 LR = 1e-4
 MAX_EPOCHS = 5
 CRITERION = nn.CrossEntropyLoss
-BATCH_SIZE = 2048
+BATCH_SIZE = 256
+DROPOUT = 0.25
 
 # device
-DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+DEVICE = 'cuda' if not torch.cuda.is_available() else 'cpu'
 
-MODELS = {
-    'CNN': NeuralNetClassifier(module=cnn_classifier,
-        module__dropout=0.25,
-        module__n_labels=LABEL_CLASS_COUNT,
+def get_model(batch_size, lr, max_epochs, dropout, n_labels):
+    return NeuralNetClassifier(module=cnn_classifier_original,
+        module__dropout=dropout,
+        module__n_labels=n_labels,
         optimizer=OPTIMIZER,
-        lr=LR,
-        max_epochs=MAX_EPOCHS,
+        lr=lr,
+        max_epochs=max_epochs,
         criterion=CRITERION,
-        batch_size=BATCH_SIZE,
+        batch_size=batch_size,
         iterator_train__shuffle=True,
         train_split=None,
         device=DEVICE,
+        callbacks=[
+                MLflowLogger() # log metrics to mlflow
+                ],
         verbose=0)
-}
 
+
+# model hyper-parameters
+MODELS = {
+    'p02' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   }, 
+    'p04' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
+    'p05' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
+    'p06' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
+    'p07' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
+    'p08' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
+    'p09' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
+    'p10' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
+    'p12' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
+    'p13' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
+    'p15' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
+    'p17' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
+    'p19' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
+    'p20' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
+    'p22' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
+    'p23' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   }
+}
 
 
 
 PARAMS = {
 
     'CNN': {
+    'local_classifier__batch_size': [128, 256, 512],
     'local_classifier__lr': [LR*0.1, LR,  LR*10],
     'local_classifier__max_epochs' : [MAX_EPOCHS,  MAX_EPOCHS*2, MAX_EPOCHS*4]
     }

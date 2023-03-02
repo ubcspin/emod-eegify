@@ -1,6 +1,7 @@
 import pathlib
 import sys
 
+
 _parentdir = pathlib.Path(__file__).parent.parent.resolve()
 sys.path.insert(0, str(_parentdir))
 
@@ -13,9 +14,9 @@ from tqdm import tqdm
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import make_scorer
 
-from validation.val_estimator_helper_hc import EstimatorSelectionHelper
+from val_estimator_helper_hc import EstimatorSelectionHelper
 
-from validation.models_val import MODELS, PARAMS
+from models_val import MODELS, PARAMS
 from config import EXP_PARAMS
 
 from hiclass2 import metrics
@@ -39,11 +40,11 @@ LABEL_TYPES = [
 
 
 
-def fit_helper(X, y, X_test, y_test, models=MODELS, params=PARAMS, n_jobs=-1, scoring={ "f1": make_scorer(metrics.f1), "prec" : make_scorer(metrics.precision), "recall": make_scorer(metrics.recall)}, cw_classes=None):
+def fit_helper(X, y, X_test, y_test, models=None, params=PARAMS, n_jobs=-1, scoring={ "f1": make_scorer(metrics.f1), "prec" : make_scorer(metrics.precision), "recall": make_scorer(metrics.recall)}, cw_classes=None):
     helper = EstimatorSelectionHelper(models, params, cw_classes)
     helper.fit(X, y,  X_test, y_test, scoring=scoring, n_jobs=n_jobs)
     try:
-        scores = helper.score_summary(X_test, sort_by='mean_test_f1')
+        scores = helper.score_summary(X_test, sort_by='f1')
         return helper, scores
     except ValueError:
         return -1, -1
@@ -96,8 +97,11 @@ def train(feature_dict, label_dict, test_feature_dict, test_label_dict,
         y_str_test = np.array(list(zip(y_cw_str_test, Y_test[label_type] )))
 
         res['y_hc_' + label_type] = y_str
-        helper, scores = fit_helper(X, y, cw_classes=len(LE.classes_))
+        res['y_hc_test_' + label_type] = y_str_test
+
+        helper, scores = fit_helper(X, y, X_test, y_test, MODELS[pnum], cw_classes=len(LE.classes_))
         res['scores_hc_' + label_type] = scores
+        res['pnum'] = pnum
         del helper
         del scores
 
