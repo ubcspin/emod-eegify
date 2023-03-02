@@ -2,13 +2,11 @@ import torch.nn as nn
 import torch
 
 from skorch import NeuralNetClassifier
-from skorch.callbacks import EpochScoring
-
-import mlflow
 
 import numpy as np
 
 from config import LABEL_CLASS_COUNT
+from config import EXP_PARAMS
 
 
 class cnn_classifier(nn.Module):
@@ -111,26 +109,17 @@ def get_model(batch_size, lr, max_epochs, dropout, n_labels):
                 ],
         verbose=0)
 
+hps = pd.read_csv('hyperparams.csv')
+SUBJECT_IDS = ['p02', 'p04', 'p05', 'p06', 'p07', 'p08', 'p09', 'p10', 'p12', 'p13', 'p15', 'p17', 'p19', 'p20', 'p22', 'p23']
 
-# model hyper-parameters
-MODELS = {
-    'p02' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   }, 
-    'p04' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
-    'p05' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
-    'p06' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
-    'p07' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
-    'p08' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
-    'p09' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
-    'p10' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
-    'p12' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
-    'p13' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
-    'p15' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
-    'p17' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
-    'p19' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
-    'p20' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
-    'p22' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   },
-    'p23' : {   'CNN': get_model(BATCH_SIZE, LR, MAX_EPOCHS, DROPOUT, LABEL_CLASS_COUNT)   }
-}
+MODELS = {}
+for window_size in EXP_PARAMS["WINDOW_SIZE"]:
+        for subject_id in SUBJECT_IDS:
+            id = subject_id + "_" + str(window_size) + "ms"
+            batch_size = hps[id]['local_classifier__batch_size']
+            lr = hps[id]['local_classifier__lr']
+            max_epochs = hps[id]['local_classifier__max_epochs']
+            MODELS[id] = {"CNN" : get_model(batch_size, lr, epochs, DROPOUT, LABEL_CLASS_COUNT)}
 
 
 

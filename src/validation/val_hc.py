@@ -99,7 +99,7 @@ def train(feature_dict, label_dict, test_feature_dict, test_label_dict,
         res['y_hc_' + label_type] = y_str
         res['y_hc_test_' + label_type] = y_str_test
 
-        helper, scores = fit_helper(X, y, X_test, y_test, MODELS[pnum], cw_classes=len(LE.classes_))
+        helper, scores = fit_helper(X, y, X_test, y_test, MODELS[pnum + "_" + str(window_size) + "ms"], cw_classes=len(LE.classes_))
         res['scores_hc_' + label_type] = scores
         res['pnum'] = pnum
         del helper
