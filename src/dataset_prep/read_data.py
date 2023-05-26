@@ -1,7 +1,14 @@
 import os
 import re
 import glob
+
+
+import pathlib
+import sys
+_parentdir = pathlib.Path(__file__).parent.parent.resolve()
+sys.path.insert(0, str(_parentdir))
 import utils
+sys.path.remove(str(_parentdir))
 
 import pandas as pd
 
@@ -14,7 +21,7 @@ FILES_DICT = {
     "calibrated_words.csv": ['timestamps', 'calibrated_words', 'calibrated_values']
 }
 
-RAW_DATA_PATH = '../../data/FEEL'
+RAW_DATA_PATH = '../feel'
 OUTPUT_DIR = 'COMBINED_DATA'
 OUTPUT_PICKLE_NAME = 'subject_data.pk'
 SAVE_PICKLE_FILE = True

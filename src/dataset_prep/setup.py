@@ -1,0 +1,25 @@
+import subprocess
+import time
+
+## THIS REQUIRES A TON OF RAM (> 16 GB)
+if __name__ == "__main__":
+    print("Reading data...")
+    p1 = subprocess.Popen(['python3 dataset_prep/read_data.py'], shell=True)
+    p1.wait()
+    time.sleep(3)
+    print("Cleaning data...")
+    p2 = subprocess.Popen(['python3 dataset_prep/clean_data.py'], shell=True)
+    p2.wait()
+    time.sleep(3)
+    print("Calculating features...")
+    p3 = subprocess.Popen(['python3 dataset_prep/calculate_features.py'], shell=True)
+    p3.wait()
+    time.sleep(3)
+    print("Calculating labels...")
+    p4 = subprocess.Popen(['python3 dataset_prep/calculate_labels.py'], shell=True)
+    p4.wait()
+    time.sleep(3)
+    print("Calculating validation...")
+    p5 = subprocess.Popen(['python3 dataset_prep/calculate_validation.py'], shell=True)
+    p5.wait()
+    print("Done!")

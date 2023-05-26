@@ -1,13 +1,21 @@
 import os
 from tabnanny import verbose
 import mne
-import utils
 
 import pandas as pd
 import numpy as np
 
-from config import DEBUG, FS, SAMPLE_PERIOD, MAX_CONTINUOUS_ANNOTATION
 from tqdm import tqdm
+
+import pathlib
+import sys
+_parentdir = pathlib.Path(__file__).parent.parent.resolve()
+sys.path.insert(0, str(_parentdir))
+import utils
+from config import DEBUG, FS, SAMPLE_PERIOD, MAX_CONTINUOUS_ANNOTATION
+sys.path.remove(str(_parentdir))
+
+import gc
 
 INPUT_PICKLE_FILE = True
 INPUT_DIR = 'COMBINED_DATA'
@@ -15,7 +23,7 @@ INPUT_PICKLE_NAME = 'subject_data.pk'
 
 SAVE_PICKLE_FILE = True
 OUTPUT_DIR = 'COMBINED_DATA'
-OUTPUT_PICKLE_NAME = 'merged_data.pk'
+OUTPUT_PICKLE_NAME = 'cleaned_data.pk'
 
 
 FILE_ORDER = [
@@ -25,7 +33,6 @@ FILE_ORDER = [
 ]
 
 def parse_data(subject_data: dict, file_order=FILE_ORDER):
-    merged_data = {}
     channel_names = [ 'E' + str(i+1) for i in range(64)] + ['Cz']
     cols = ['timestamps', 'continuous_annotation', 'calibrated_values'] + channel_names
     order = {v: i for i, v in enumerate(file_order)}
@@ -40,7 +47,6 @@ def parse_data(subject_data: dict, file_order=FILE_ORDER):
         df = pd.DataFrame.from_dict(next(subject_data_iter)['df'])
         
         df['timestamps'] = pd.to_datetime(df.timestamps, unit='ms').astype('datetime64[ms]')
-
         for subject in subject_data_iter:
             subject_df = subject['df']
 
@@ -83,24 +89,31 @@ def parse_data(subject_data: dict, file_order=FILE_ORDER):
         raw.set_channel_types({'E62': 'eog'})
         raw.drop_channels('Cz') # drop reference channel
 
+        # apply baseline correction
+        utils.logger.info('Applying baseline correction')
+        #mne.baseline.rescale(raw, , (None, None), mode='mean', copy=False)
+        # TODO apply baseline correction
+
         utils.logger.info('Applying bandpass (1Hz to 50Hz) to EEG')
         raw.filter(l_freq=1, h_freq=50, filter_length='auto', phase='zero') # apply bandpass filter, no phase so non-causal
         
         df.drop(columns=[channel_names[-1]], inplace=True)
         df[channel_names[:-1]] = raw.get_data().transpose()
 
+        merged_data = {}
         merged_data[pnum] = df
 
-    return merged_data
+        if SAVE_PICKLE_FILE:
+            utils.logger.info('Saving data')
+            output = f"{pnum}_" + OUTPUT_PICKLE_NAME
+            output_pickle_file_path = os.path.join(OUTPUT_DIR,  output)
+            utils.pickle_data(data=merged_data,
+                          file_path=output_pickle_file_path)
+        gc.collect()
 
 
 if __name__ == "__main__":
     if INPUT_PICKLE_FILE:
         input_pickle_file_path = os.path.join(INPUT_DIR, INPUT_PICKLE_NAME)
         subject_data = utils.load_pickle(input_pickle_file_path)
-        merged_data = parse_data(subject_data)
-
-    if SAVE_PICKLE_FILE:
-        output_pickle_file_path = os.path.join(OUTPUT_DIR, OUTPUT_PICKLE_NAME)
-        utils.pickle_data(data=merged_data,
-                          file_path=output_pickle_file_path)
+        parse_data(subject_data)

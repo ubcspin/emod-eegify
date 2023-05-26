@@ -13,12 +13,13 @@ import utils
 import numpy as np 
 import pandas as pd
 
+import mlflow
 
 
 
 class EstimatorSelectionHelper:
 
-    def __init__(self, models, params, root_classes=None):
+    def __init__(self, models, params, root_classes=None, key=None):
         if not set(models.keys()).issubset(set(params.keys())):
             missing_params = list(set(models.keys()) - set(params.keys()))
             raise ValueError(
@@ -28,12 +29,13 @@ class EstimatorSelectionHelper:
         self.keys = models.keys()
         self.root_classes = root_classes
         self.random_searches = {}
+        self.key = key
 
     def cv(self, n_splits=CV_SPLITS, random_state=None, shuffle=True):
         return KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
 
 
-    def fit(self, X, y, cv=None, n_jobs=-1, verbose=1, scoring=None, refit=False):
+    def fit(self, X, y, X_test, y_test, cv=None, n_jobs=-1, verbose=1, scoring=None, refit=False):
         if cv is None:
             cv = self.cv()
         for key in self.keys:
@@ -41,7 +43,17 @@ class EstimatorSelectionHelper:
 
             estimator = LocalClassifierPerParentNode(self.models[key], n_jobs=n_jobs, root_classes = self.root_classes, replace_classifiers=False)
 
-            rs = cross_validate(estimator, X, y, cv=cv, scoring=scoring, n_jobs=n_jobs)
+            with mlflow.start_run():
+                mlflow.log_param("key", self.key)
+                estimator.fit(X, y)
+            y_hat = estimator.predict(X_test)
+            
+
+            rs = {}
+            for fname, f in scoring.items():
+                print(fname, f(y_test, y_hat))
+                rs["test_" + fname] = f(y_test, y_hat)
+            #rs = cross_validate(estimator, X, y, cv=cv, scoring=scoring, n_jobs=n_jobs)
             self.random_searches[key] = rs
             print(rs)
 
@@ -49,20 +61,9 @@ class EstimatorSelectionHelper:
         def row(key, f1, prec, recall):
             d = {
                 'estimator': key,
-                'min_f1': min(f1),
-                'max_f1': max(f1),
-                'mean_f1': np.mean(f1),
-                'std_f1': np.std(f1),
-
-                'min_precision': min(prec),
-                'max_precision': max(prec),
-                'mean_precision': np.mean(prec),
-                'std_precision': np.std(prec),
-
-                'min_recall': min(recall),
-                'max_recall': max(recall),
-                'mean_recall': np.mean(recall),
-                'std_recall': np.std(recall)
+                'f1': f1,
+                'precision': prec,
+                'recall': recall
             }
             return pd.Series({**d})
 
@@ -77,7 +78,7 @@ class EstimatorSelectionHelper:
 
         df = pd.concat(rows, axis=1).T.sort_values([sort_by], ascending=False)
 
-        columns = ['estimator', 'min_f1', 'mean_f1', 'max_f1', 'std_f1', 'min_precision', 'mean_precision', 'max_precision', 'std_precision', 'min_recall', 'mean_recall', 'max_recall', 'std_recall']
+        columns = ['estimator', 'f1', 'precision', 'recall']
         columns = columns + [c for c in df.columns if c not in columns]
 
         return df[columns]

@@ -4,7 +4,13 @@ import numpy as np
 import pandas as pd
 
 
+import pathlib
+import sys
+_parentdir = pathlib.Path(__file__).parent.parent.resolve()
+sys.path.insert(0, str(_parentdir))
 from config import FS, WINDOW_TYPE
+sys.path.remove(str(_parentdir))
+
 
 
 COLUMNS = None

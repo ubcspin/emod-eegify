@@ -1,17 +1,21 @@
 import os
-import utils
 
 import numpy as np
 import pandas as pd
 
 from tqdm import tqdm
 
+import pathlib
+import sys
+_parentdir = pathlib.Path(__file__).parent.parent.resolve()
+sys.path.insert(0, str(_parentdir))
+import utils
 from config import TIME_INDEX, TIME_INTERVAL, LABEL_CLASS_COUNT, WINDOW_SIZE, EXP_PARAMS, FS
-
+sys.path.remove(str(_parentdir))
 
 INPUT_PICKLE_FILE = True
 INPUT_DIR = 'COMBINED_DATA'
-INPUT_PICKLE_NAME = 'merged_data.pk'
+INPUT_PICKLE_NAME = 'cleaned_data.pk'
 
 SAVE_PICKLE_FILE = True
 OUTPUT_DIR = 'COMBINED_DATA'
@@ -20,6 +24,9 @@ OUTPUT_PICKLE_NAME = 'labels.pk'
 COLUMNS = None
 
 LABELS = ['pos', 'angle', 'acc', 'cw_mode']
+SUBJECT_IDS = ['p02', 'p04', 'p05', 'p06', 'p07', 'p08', 'p09', 'p10', 'p12', 'p13', 'p15', 'p17', 'p19', 'p20', 'p22', 'p23']
+
+
 
 def mode(x):
     values, counts = np.unique(x, return_counts=True)
@@ -67,13 +74,19 @@ def calculate_labels_per_participant(df, time_index=TIME_INDEX, time_interval=TI
     return results
 
 
-def calculate_labels(merged_data: dict, window_size):
+def calculate_labels(window_size):
     all_labels = {}
 
     if not isinstance(window_size, str):
         time_interval = str(window_size) + 'ms'
 
-    for pnum in tqdm(merged_data.keys()):
+
+    for pnum in tqdm(SUBJECT_IDS):
+        if INPUT_PICKLE_FILE:
+            input_pickle_file_path = os.path.join(INPUT_DIR, f"{pnum}_" + INPUT_PICKLE_NAME)
+            merged_data = utils.load_pickle(
+                pickled_file_path=input_pickle_file_path)
+            
         utils.logger.info(f'Calculating labels for {pnum}')
         labels = calculate_labels_per_participant(merged_data[pnum], time_interval=time_interval, window_size=window_size)
 
@@ -127,17 +140,12 @@ def stress_2_accumulator(stress_windows):
     return integral/max_area  # map to [0,1]
 
 
-if __name__ == '__main__':
-    if INPUT_PICKLE_FILE:
-        input_pickle_file_path = os.path.join(INPUT_DIR, INPUT_PICKLE_NAME)
-        merged_data = utils.load_pickle(
-            pickled_file_path=input_pickle_file_path)
-
+if __name__ == "__main__":
     window_sizes = EXP_PARAMS["WINDOW_SIZE"]
 
     for wsize in window_sizes:
         utils.logger.info(f'Calculating labels for window size: {wsize} ms')
-        label_data = calculate_labels(merged_data, wsize)
+        label_data = calculate_labels(wsize)
 
         if SAVE_PICKLE_FILE:
             utils.logger.info('Saving data')

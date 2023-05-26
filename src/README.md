@@ -1,10 +1,5 @@
 # emod-eegify
 
-Code for analyzing EEG collected during the EEG study. Protocol discussion: _Choose or Fuse: Enriching Data Views with Multi-label Emotion Dynamics. Cang et al. (ACII 2022)_
-
-
-
-The dataset consists of comma separated value (.csv) files organized by participant. For each participant there are four csv files: brain activity, keypress, calibrated words and joystick data. The structure looks something like the following:
 ```
 ├── feel
 │   ├── p10
@@ -17,13 +12,13 @@ The dataset consists of comma separated value (.csv) files organized by particip
 │   │   ├── eeg.csv
 │   │   ├── fsr.csv
 │   │   └── joystick.csv
-
+├── src
 ```
 
 ## Getting Started
 1. unzip feel.zip and the subsequent zip files within: File structure should look like feel/p* where * is an integers(should contain .csv files)
-2. run setup.py from the src directory to prepare the dataset for the model (ensure you have the correct path for the feel folder)
-3. run the train_hc.py from the src directory to run hyperparameter search
+2. run setup.py from the *src* directory to prepare the dataset for the model (ensure you have the correct path for the feel folder)
+3. run the train_hc.py from the *src* directory to run hyperparameter search
 4. run ```hyperparameter_results.py``` to create a csv of the hyperparameters in the validation folder
 5. run ```val_hc.py``` to validate the model on unseen data
 6. run ```validation_results.py``` to generate the validation results in the validation folder
@@ -38,4 +33,3 @@ The dataset consists of comma separated value (.csv) files organized by particip
 - ```config.py```: constant declarations
 - ```train_hc.py```: main training script 
 - ```utils.py```: general purpose methods (pickle and load pickled files)
-

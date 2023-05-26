@@ -1,3 +1,9 @@
+import pathlib
+import sys
+
+_parentdir = pathlib.Path(__file__).parent.parent.resolve()
+sys.path.insert(0, str(_parentdir))
+
 import os
 import utils
 import numpy as np
@@ -84,7 +90,7 @@ def train(feature_dict, label_dict, label_types=LABEL_TYPES, feature_types=FEATU
 
 if __name__ == '__main__':
 
-    for i in range(100, 101):
+    for i in range(0, 1):
         for window_size in EXP_PARAMS['WINDOW_SIZE']:
             if INPUT_PICKLE_FILE:
                 participant_results = {}
@@ -105,5 +111,9 @@ if __name__ == '__main__':
 
                     if SAVE_PICKLE_FILE:
                         iter_ = subject_id + "_" + str(i) + '_' + str(window_size) + 'ms_hc_cw_' + OUTPUT_PICKLE_NAME
+                        os.makedirs(OUTPUT_DIR, exist_ok=True)
                         output_pickle_file_path = os.path.join(OUTPUT_DIR, iter_)
                         utils.pickle_data(data=training_results, file_path=output_pickle_file_path)
+
+
+    sys.path.remove(str(_parentdir))
