@@ -17,7 +17,7 @@
 
 ## Getting Started
 1. unzip feel.zip and the subsequent zip files within: File structure should look like feel/p* where * is an integers(should contain .csv files)
-2. run setup.py from the *src* directory to prepare the dataset for the model (ensure you have the correct path for the feel folder)
+2. run setup.py from the *src* directory to prepare the dataset for the model (ensure you have the correct path for the *feel* folder which is set in read_data.py)
 3. run the train_hc.py from the *src* directory to run hyperparameter search
 4. run ```hyperparameter_results.py``` to create a csv of the hyperparameters in the validation folder
 5. run ```val_hc.py``` to validate the model on unseen data

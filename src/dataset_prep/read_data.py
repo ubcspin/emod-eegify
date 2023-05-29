@@ -34,6 +34,8 @@ def read_dataset(src_dir=RAW_DATA_PATH, output_dir=OUTPUT_DIR, file_dict=FILES_D
     all_subjects_files = [glob.glob(os.path.join(x, '*'))
                           for x in subject_data_dir]
     
+    print(subject_data_dir)
+    
     subjects = {}
 
     for subject_files in all_subjects_files:

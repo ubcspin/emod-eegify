@@ -21,7 +21,7 @@ The dataset consists of comma separated value (.csv) files organized by particip
 ```
 
 ## Getting Started
-1. unzip feel.zip and the subsequent zip files within: File structure should look like feel/p* where * is an integers(should contain .csv files)
+1. unzip FEEL_DATA.zip and the subsequent zip files within: File structure should look like feel/p* where * is an integers(should contain .csv files). Consider using the following command: ```for p in *; do unzip $p; done``` to unzip all the files at once. Also ensure that you **remove** zip files within the feel folder after unzipping.
 2. run setup.py from the src directory to prepare the dataset for the model (ensure you have the correct path for the feel folder)
 3. run the train_hc.py from the src directory to run hyperparameter search
 4. run ```hyperparameter_results.py``` to create a csv of the hyperparameters in the validation folder

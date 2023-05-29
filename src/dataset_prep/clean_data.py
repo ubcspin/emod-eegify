@@ -89,16 +89,16 @@ def parse_data(subject_data: dict, file_order=FILE_ORDER):
         raw.set_channel_types({'E62': 'eog'})
         raw.drop_channels('Cz') # drop reference channel
 
-        # apply baseline correction
-        utils.logger.info('Applying baseline correction')
-        #mne.baseline.rescale(raw, , (None, None), mode='mean', copy=False)
-        # TODO apply baseline correction
-
         utils.logger.info('Applying bandpass (1Hz to 50Hz) to EEG')
         raw.filter(l_freq=1, h_freq=50, filter_length='auto', phase='zero') # apply bandpass filter, no phase so non-causal
+
+        # apply baseline correction
+        utils.logger.info('Applying baseline correction')
+        eeg_arr = raw.get_data()
+        mne.baseline.rescale(eeg_arr, raw.times, (None, None), mode='mean', copy=False) # baseline correction
         
         df.drop(columns=[channel_names[-1]], inplace=True)
-        df[channel_names[:-1]] = raw.get_data().transpose()
+        df[channel_names[:-1]] = eeg_arr.transpose() # replace eeg data with baseline corrected data and filtered data
 
         merged_data = {}
         merged_data[pnum] = df
