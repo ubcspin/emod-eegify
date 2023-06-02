@@ -51,7 +51,11 @@ def calculate_features_per_participant(df, time_index=TIME_INDEX, time_interval=
             utils.logger.info(f'Window cropped {window.shape[0]}, expected size {n_samples}')
             window = window[:n_samples, :]
         windows.append(window)
-    
+
+    for i, window in enumerate(windows):
+        if i > 0:
+            channel_means = np.mean(windows[i-1][:,1:], axis=0, keepdims=True) # calc the mean for each channel from the previous window
+            windows[i][:,1:] = windows[i][:,1:] - channel_means # subtract the mean of the previous window from from the current window
 
     utils.logger.info(f'Calculating features for each window')
     de_features = calculate_de_features(

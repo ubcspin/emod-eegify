@@ -95,7 +95,8 @@ def parse_data(subject_data: dict, file_order=FILE_ORDER):
         # apply baseline correction
         utils.logger.info('Applying baseline correction')
         eeg_arr = raw.get_data()
-        mne.baseline.rescale(eeg_arr, raw.times, (None, None), mode='mean', copy=False) # baseline correction
+        # comment out baseline correction for now: BG 2023-06-02
+        # mne.baseline.rescale(eeg_arr, raw.times, (None, None), mode='mean', copy=False) # baseline correction
         
         df.drop(columns=[channel_names[-1]], inplace=True)
         df[channel_names[:-1]] = eeg_arr.transpose() # replace eeg data with baseline corrected data and filtered data
