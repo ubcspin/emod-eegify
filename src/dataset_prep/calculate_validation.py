@@ -28,6 +28,17 @@ OUTPUT_LABEL_NAME = '_val_labels.pk'
 SUBJECT_IDS = ['p02', 'p04', 'p05', 'p06', 'p07', 'p08', 'p09', 'p10', 'p12', 'p13', 'p15', 'p17', 'p19', 'p20', 'p22', 'p23']
 
 
+def check_val_is_subset(train_labels, val_labels):
+    train_angle, train_word = train_labels[['angle','cw_mode']].to_numpy().T
+    val_angle, val_word = val_labels[['angle','cw_mode']].to_numpy().T
+
+    train_word = list(train_word) # convert numpy string to list of strings
+    val_word = list(val_word) # convert numpy string to list of strings
+
+    train_dist = set([(l1,l2) for l1,l2 in zip(train_word, train_angle)]) # create a distribution of the training data
+    val_dist = set([(l1,l2) for l1,l2 in zip(val_word, val_angle)]) # create a distribution of the validation data
+
+    return val_dist.issubset(train_dist) # check if the validation distribution is a subset of the training distribution
 
 if __name__ == "__main__":
     for window_size in EXP_PARAMS['WINDOW_SIZE']:
@@ -44,16 +55,23 @@ if __name__ == "__main__":
             labels = utils.load_pickle(pickled_file_path=input_label_file_path)
 
 
-            splitter = ShuffleSplit(n_splits=1, test_size=.5, random_state=None)
+            split_data = True
+            while split_data:
+                splitter = ShuffleSplit(n_splits=1, test_size=.5, random_state=None)
 
-            for train_index, val_index in splitter.split(features[subject_id]):
-                continue
+                for train_index, val_index in splitter.split(features[subject_id]):
+                    continue
+
+                train_l = labels[subject_id].iloc[train_index]
+                val_l = labels[subject_id].iloc[val_index]
+
+                split_data = check_val_is_subset(train_l, val_l) == False
+                if split_data == False:
+                    utils.logger.info(f'Successfully completed validation split for {subject_id}')
+
                  
             train_features = features[subject_id].iloc[train_index]
             val_features = features[subject_id].iloc[val_index]
-
-            train_l = labels[subject_id].iloc[train_index]
-            val_l = labels[subject_id].iloc[val_index]
 
 
             train_feature = {}
