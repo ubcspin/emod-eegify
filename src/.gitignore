@@ -1,3 +1,5 @@
 *.csv
 *.tmp
 *.zip
+COMBINED_DATA/*
+COMBINED_DATA_TOUCHTALE/*

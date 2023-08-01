@@ -16,13 +16,16 @@ from tqdm import tqdm
 
 # Filenames and columns
 FILES_DICT = {
-    "eeg.csv": ['timestamps'] + [ 'E' + str(i+1) for i in range(64)] + ['Cz'],
-    "joystick.csv": ['timestamps', 'continuous_annotation'],
+    "bpm.csv": ['timestamps', 'BPM'],
+    "flag.csv": ['timestamps', 'flag'],
+    "gsr.csv": ['timestamps', 'GSR'],
+    "feeltrace.csv": ['timestamps', 'feeltrace'],
+    "touch.csv": ['timestamps'] + ['T'+str(i) for i in range(1, 101)],
     "calibrated_words.csv": ['timestamps', 'calibrated_words', 'calibrated_values']
 }
 
-RAW_DATA_PATH = 'feel'
-OUTPUT_DIR = 'COMBINED_DATA'
+RAW_DATA_PATH = 'touchtale'
+OUTPUT_DIR = 'COMBINED_DATA_TOUCHTALE'
 OUTPUT_PICKLE_NAME = 'subject_data.pk'
 SAVE_PICKLE_FILE = True
 
@@ -56,7 +59,6 @@ def extract_pnum(filename: str):
 
 def parse_files(subject_files: list, file_dict=FILES_DICT):
     subject_data = []
-    calibrated_words = pd.DataFrame()
 
 
     for file in tqdm(subject_files):
@@ -69,6 +71,8 @@ def parse_files(subject_files: list, file_dict=FILES_DICT):
             continue
 
         utils.logger.info(f'Reading {filename}')
+
+        print(file_dict[filename])
 
         x = pd.read_csv(file, names=file_dict[filename], header=0, low_memory=False)
         subject_data.append({'filename': filename, 'df': x})

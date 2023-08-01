@@ -4,6 +4,9 @@ import numpy as np
 import pandas as pd
 
 from calculate_de_features import calculate_de_features
+from calculate_freq_features import calc_freq_features
+from calculate_stat_features import calculate_statistical_features
+
 from tqdm import tqdm
 
 import pathlib
@@ -15,36 +18,40 @@ from config import TIME_INDEX, TIME_INTERVAL, WINDOW_SIZE, EXP_PARAMS, FS
 sys.path.remove(str(_parentdir))
 
 INPUT_PICKLE_FILE = True
-INPUT_DIR = 'COMBINED_DATA'
+INPUT_DIR = 'COMBINED_DATA_TOUCHTALE'
 INPUT_PICKLE_NAME = 'cleaned_data.pk'
 
 SAVE_PICKLE_FILE = True
-OUTPUT_DIR = 'COMBINED_DATA'
+OUTPUT_DIR = 'COMBINED_DATA_TOUCHTALE'
 OUTPUT_PICKLE_NAME = 'featurized_data.pk'
 
 COLUMNS = None
 
-SUBJECT_IDS = ['p02', 'p04', 'p05', 'p06', 'p07', 'p08', 'p09', 'p10', 'p12', 'p13', 'p15', 'p17', 'p19', 'p20', 'p22', 'p23']
-
+SUBJECT_IDS = [x[:3] if 'p0' in x else '' for x in os.listdir('COMBINED_DATA_TOUCHTALE/')]
+SUBJECT_IDS.remove('')
 
 
 def calculate_features_per_participant(df, time_index=TIME_INDEX, time_interval=TIME_INTERVAL, columns=COLUMNS, window_size=WINDOW_SIZE, fs=FS):
-    print(df.shape)
     df = df.assign(window_id=df.groupby(pd.Grouper( key=time_index, freq=time_interval)).ngroup())
-    print(df.shape)
+
+    columns = ['BPM', 'flag', 'GSR', 'feeltrace', 'calibrated_values']
+    statistical_features = calculate_statistical_features(
+        grouped_data[columns])
+    statistical_features = statistical_features.reset_index()
+    frequency_features = calc_freq_features(
+        df, columns, time_interval=time_interval, time_index=time_index)
+
     if columns is None:
-        columns = ['window_id'] + [ 'E' + str(i+1) for i in range(64)] 
+        columns = ['window_id'] + ['T' + str(i) for i in range(1, 101)]
 
     utils.logger.info(f'Applying windows of length {time_index}')
     grouped_data = df[columns].groupby('window_id').apply(np.array).to_numpy()
-    print("group data shape: ", np.array(grouped_data).shape)
 
     n_samples = window_size / 1e3 * fs
     n_samples = int(n_samples)
     utils.logger.info(f'Removing windows less than {window_size} ms ({n_samples})')
 
-    print(np.array(grouped_data[0]).shape)
-
+    print("group data shape: ", np.array(grouped_data).shape)
     windows = []
     for window in grouped_data:
         print("window shape: ", np.array(window).shape)
@@ -73,7 +80,6 @@ def calculate_features_per_participant(df, time_index=TIME_INDEX, time_interval=
     return all_features
 
 def calculate_features():
-
     for pnum in tqdm(SUBJECT_IDS):
         input_pickle_file_path = os.path.join(INPUT_DIR, f"{pnum}_" + INPUT_PICKLE_NAME)
 
@@ -82,8 +88,7 @@ def calculate_features():
                 pickled_file_path=input_pickle_file_path)
         except: 
             merged_data = utils.load_pickle(
-                pickled_file_path=os.getcwd()+'/src/'+input_pickle_file_path)
-            
+                pickled_file_path=os.getcwd()+'/'+input_pickle_file_path)
 
         utils.logger.info(f'Calculating features for {pnum}')
 
@@ -91,7 +96,7 @@ def calculate_features():
 
         for wsize in window_sizes:
             utils.logger.info(f'Calculating labels for window size: {wsize} ms')
-            features = calculate_features_per_participant(merged_data[pnum], time_interval=f"{wsize}ms", window_size=wsize)
+            features = calculate_features_per_participant(merged_data[pnum], time_interval=f"{wsize}ms", window_size=wsize, fs=50)
 
 
             participant_feature = {}
