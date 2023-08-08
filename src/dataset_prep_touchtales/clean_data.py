@@ -13,7 +13,7 @@ import sys
 _parentdir = pathlib.Path(__file__).parent.parent.resolve()
 sys.path.insert(0, str(_parentdir))
 import utils
-from config import DEBUG, FS, SAMPLE_PERIOD, MAX_CONTINUOUS_ANNOTATION
+from config_touchtale import DEBUG, FS, SAMPLE_PERIOD, MAX_CONTINUOUS_ANNOTATION
 sys.path.remove(str(_parentdir))
 
 import gc
@@ -50,7 +50,6 @@ def parse_data(subject_data: dict, file_order=FILE_ORDER):
         df = pd.DataFrame.from_dict(next(subject_data_iter)['df'])
         
         df['timestamps'] = pd.to_datetime(df.timestamps, unit='ms').astype('datetime64[ms]')
-        # print(df.timestamps)
         for subject in subject_data_iter:
             subject_df = subject['df']
 
@@ -71,7 +70,9 @@ def parse_data(subject_data: dict, file_order=FILE_ORDER):
             df = pd.merge(df, subject_df, on='timestamps')
         
         df['pnum'] = pnum
-        df['timestamps'] = df.timestamps.astype('int64') / 1e9
+        df['timestamps'] = df.timestamps.astype('int64') / 1e6
+
+        print(df.timestamps)
 
         utils.logger.info('Sorting DataFrame')
         df.sort_values(by='timestamps', inplace=True)

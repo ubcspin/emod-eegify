@@ -1,6 +1,12 @@
 import pandas as pd
 import numpy as np
 
+
+import pathlib
+import sys
+_parentdir = pathlib.Path(__file__).parent.resolve()
+print(_parentdir)
+sys.path.insert(0, str(_parentdir))
 from utils import auc_group, sum_abs_diffs
 
 

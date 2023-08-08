@@ -96,7 +96,7 @@ def calculate_features():
 
             participant_feature = {}
             participant_feature[pnum] = features
-
+            
             if SAVE_PICKLE_FILE:
                 utils.logger.info('Saving data')
                 output = f"{pnum}_" + str(wsize) + 'ms_' + OUTPUT_PICKLE_NAME

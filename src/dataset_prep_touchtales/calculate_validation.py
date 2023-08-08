@@ -10,22 +10,26 @@ import sys
 _parentdir = pathlib.Path(__file__).parent.parent.resolve()
 sys.path.insert(0, str(_parentdir))
 import utils
-from config import EXP_PARAMS
+from config_touchtale import EXP_PARAMS
 sys.path.remove(str(_parentdir))
 
 
 
 INPUT_PICKLE_FILE = True
-INPUT_DIR = 'COMBINED_DATA'
+INPUT_DIR = 'COMBINED_DATA_TOUCHTALE'
 INPUT_PICKLE_NAME = '_featurized_data.pk'
 INPUT_LABEL_NAME = '_labels.pk'
 
 SAVE_PICKLE_FILE = True
-OUTPUT_DIR = 'COMBINED_DATA'
+OUTPUT_DIR = 'COMBINED_DATA_TOUCHTALE'
 OUTPUT_PICKLE_NAME = '_val_featurized_data.pk'
 OUTPUT_LABEL_NAME = '_val_labels.pk'
 
-SUBJECT_IDS = ['p02', 'p04', 'p05', 'p06', 'p07', 'p08', 'p09', 'p10', 'p12', 'p13', 'p15', 'p17', 'p19', 'p20', 'p22', 'p23']
+SUBJECT_IDS = [x[:3] if 'p0' in x and 'cleaned' in x else '' for x in os.listdir('COMBINED_DATA_TOUCHTALE/')]
+SUBJECT_IDS = list(filter(lambda a: a != '', SUBJECT_IDS))
+print(SUBJECT_IDS)
+
+
 
 
 def check_val_is_subset(train_labels, val_labels):
@@ -58,20 +62,22 @@ if __name__ == "__main__":
                 features = utils.load_pickle(pickled_file_path=os.getcwd()+'/src/'+input_pickle_file_path)
                 labels = utils.load_pickle(pickled_file_path=os.getcwd()+'/src/'+input_label_file_path)
 
+            print(features[subject_id])
+            print(labels[subject_id])
 
             split_data = True
             while split_data:
-                splitter = ShuffleSplit(n_splits=1, test_size=.5, train_size=0.5, random_state=None)
-
-                # print(splitter.split(features[subject_id]))
+                splitter = ShuffleSplit(n_splits=1, test_size=0.3, random_state=None)
 
                 for train_index, val_index in splitter.split(features[subject_id]):
-                # for i, (train_index, val_index) in enumerate(splitter.split(features[subject_id].iloc[0][:-1])):
-                    print(train_index, val_index)
                     continue
 
-                train_l = labels[subject_id].iloc[0].iloc[train_index]
-                val_l = labels[subject_id].iloc[0].iloc[val_index]
+                print(train_index, val_index)
+
+                train_l = labels[subject_id].iloc[train_index]
+                val_l = labels[subject_id].iloc[val_index]
+
+                print(train_l, val_l, subject_id)
 
                 split_data = check_val_is_subset(train_l, val_l) == False
                 if split_data == False:

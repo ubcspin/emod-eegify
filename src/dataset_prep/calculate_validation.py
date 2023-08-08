@@ -61,11 +61,12 @@ if __name__ == "__main__":
 
             split_data = True
             while split_data:
-                splitter = ShuffleSplit(n_splits=1, test_size=.5, train_size=0.5, random_state=None)
+                splitter = ShuffleSplit(n_splits=1, test_size=0.5, train_size=0.5, random_state=None)
 
                 # print(splitter.split(features[subject_id]))
-
-                for train_index, val_index in splitter.split(features[subject_id]):
+                print(len(features), features.keys())
+                print(np.squeeze(features[subject_id]))
+                for (train_index, val_index) in splitter.split(np.squeeze(features[subject_id])):
                 # for i, (train_index, val_index) in enumerate(splitter.split(features[subject_id].iloc[0][:-1])):
                     print(train_index, val_index)
                     continue

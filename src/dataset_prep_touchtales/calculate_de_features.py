@@ -14,7 +14,7 @@ sys.path.remove(str(_parentdir))
 
 
 COLUMNS = None
-BANDS = {'alpha': (8, 12), 'beta': (12, 30), 'delta': (1, 4), 'theta': (4, 7), 'gamma': (30, 50)}
+BANDS = {'alpha': (5e-3, 5e-2), 'beta': (5e-2, 5e-1), 'delta': (0, 5e-3), 'theta': (5e-1, 5), 'gamma': (5, 500)}
 
 
 
@@ -31,12 +31,14 @@ def calculate_de_features(dataset, fs=FS, window_type=WINDOW_TYPE):
     features = []
     for window in psd_windows: # calculate the power in each band for channel for each window
         freqs, psd = window
+        print(np.array(psd).mean(), np.array(psd).std())
         # find the freqs between low and high
         idx_bands = [np.logical_and(freqs >= low, freqs <= high) for low,high in band_freqs]
 
         # frequency delta
         freq_res = freqs[1] - freqs[0]
         # calculate frequency power for each band
+        print(idx_bands[0], psd[idx_bands[0],:])
         band_powers = np.array([sp.integrate.simpson(psd[idx,:], dx=freq_res, axis=0) for idx in idx_bands]) # (5,64)
 
         normed_powers = band_powers
