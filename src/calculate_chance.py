@@ -6,15 +6,17 @@ def precision(y_true: np.ndarray, y_pred: np.ndarray):
     sum_intersection = 0
     sum_prediction_and_ancestors = 0
     for ground_truth, prediction in zip(y_true, y_pred):
-        ground_truth_set = set(ground_truth)
-        prediction_set = set(prediction)
-        sum_intersection = sum_intersection + len(
-            ground_truth_set.intersection(prediction_set)
-        )
-        sum_prediction_and_ancestors = sum_prediction_and_ancestors + len(
-            prediction_set
-        )
-    precision = sum_intersection / sum_prediction_and_ancestors
+        if ground_truth == prediction[1]:
+            sum_intersection += 1
+        # ground_truth_set = set(ground_truth)
+        # prediction_set = set(prediction)
+        # sum_intersection = sum_intersection + len(
+        #     ground_truth_set.intersection(prediction_set)
+        # )
+        # sum_prediction_and_ancestors = sum_prediction_and_ancestors + len(
+        #     prediction_set
+        # )
+    precision = sum_intersection / len(y_pred)
     return precision
 
 
@@ -68,7 +70,8 @@ def row(pnum, window, scores):
 def calc_chance(labels, n=1000):
     metric = lambda yt,yp: [f1(yt,yp), precision(yt,yp), recall(yt,yp)]
 
-    cw_labels, dir_labels = labels.T
+    cw_labels = labels.T
+    # cw_labels, dir_labels = labels.T
     
     cw_unique = np.unique(cw_labels) # number of unique words
     dir_unique = ['0','1','2'] # number of unique directions
@@ -80,6 +83,7 @@ def calc_chance(labels, n=1000):
 
     for i in range(n):
         pred = np.vstack([cw_pred[:,i],dir_pred[:,i]]).T
+        print("labels: ", labels, "pred: ", pred)
         metrics[i] = metric(labels, pred)
 
     mean_f1, mean_prec, mean_recall = metrics.mean(axis=0)

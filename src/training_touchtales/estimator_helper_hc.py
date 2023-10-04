@@ -117,25 +117,46 @@ class EstimatorSelectionHelper:
                 'mean_score': np.mean(scores),
                 'std_score': np.std(scores),
             }
+            print("120")
+
+            print({**params, **d})
             return pd.Series({**params, **d})
 
         rows = []
         for k in self.grid_searches:
             params = self.grid_searches[k].cv_results_['params']
             scores = []
+
+            keys = self.grid_searches[k].cv_results_.keys()
+            print("keys: ", keys)
             for i in range(self.grid_searches[k].cv.get_n_splits()):
-                key = "split_{}_test_score".format(i)
-                r = self.grid_searches[k].cv_results_[key]
-                scores.append(r.reshape(len(params), 1))
+                key = "split{}_test_f1".format(i)
+                if key in keys:
+                    r = self.grid_searches[k].cv_results_[key]
+                    scores.append(r.reshape(len(params), 1))
+                else:
+                    print(f"key: {key}, keys: {keys}")
 
             all_scores = np.hstack(scores)
-            for p, s in zip(params, all_scores):
-                rows.append((row(k, s, p)))
+            try:
+                print(f"all score {all_scores}, params {params}, type: {type(all_scores)}/{type(params)}")
+                
+                for p, s in zip(params, all_scores):
+                    print(p, s)
+                    rows.append((row(k, s, p)))
+            except Exception as e:
+                print(f"147 all score {all_scores}, params {params}")
+                print("error! ", e)
+
+        print("151", sort_by)
 
         df = pd.concat(rows, axis=1).T.sort_values([sort_by], ascending=False)
+        print("152")
 
         columns = ['estimator', 'min_score',
                    'mean_score', 'max_score', 'std_score']
         columns = columns + [c for c in df.columns if c not in columns]
+
+        print("158, ", columns)
 
         return df[columns]

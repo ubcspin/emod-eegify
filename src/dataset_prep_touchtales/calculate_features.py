@@ -16,7 +16,7 @@ import sys
 _parentdir = pathlib.Path(__file__).parent.parent.resolve()
 sys.path.insert(0, str(_parentdir))
 import utils
-from config_touchtale import TIME_INDEX, TIME_INTERVAL, WINDOW_SIZE, EXP_PARAMS, FS
+from config_touchtale import TIME_INDEX, TIME_INTERVAL, WINDOW_SIZE, EXP_PARAMS, FS, N_SAMPLES, MODE, TOUCH_FEATURES_ONLY, OTHER_FEATURES_ONLY, ALL_FEATURES_INCLUDED, SUBJECT_IDS
 sys.path.remove(str(_parentdir))
 
 INPUT_PICKLE_FILE = True
@@ -29,77 +29,115 @@ OUTPUT_PICKLE_NAME = 'featurized_data.pk'
 
 COLUMNS = None
 
-SUBJECT_IDS = [x[:3] if 'p0' in x and 'cleaned' in x else '' for x in os.listdir('COMBINED_DATA_TOUCHTALE/')]
-SUBJECT_IDS = list(filter(lambda a: a != '', SUBJECT_IDS))
-print(SUBJECT_IDS)
-
 
 def calculate_features_per_participant(df, time_index=TIME_INDEX, time_interval=TIME_INTERVAL, columns=COLUMNS, window_size=WINDOW_SIZE, fs=FS):
     df = df.assign(window_id=df.groupby(pd.Grouper( key=time_index, freq=time_interval)).ngroup())
 
     columns = ['window_id', 'BPM', 'flag', 'GSR']
-    grouped_data = df[columns].groupby('window_id')
+    grouped_data = df[columns].groupby('window_id', group_keys=False).apply(np.array).to_numpy()
+    # print(len(grouped_data))
+
+    other_feat_windows_arr = []
+    for window in grouped_data:
+        # window = window[:mean_windowsize, :]
+        if window.shape[0] < N_SAMPLES:
+            utils.logger.info(f'Window removed {window.shape[0]}, expected size {N_SAMPLES}')
+            continue
+        elif window.shape[0] > N_SAMPLES:
+            utils.logger.info(f'Window cropped {window.shape[0]}, expected size {N_SAMPLES}')
+            window = window[:N_SAMPLES, :]
+        # print("window shape: ", np.array(window).shape, n_samples)
+        other_feat_windows_arr.append(window)
+
+    windows = np.array(other_feat_windows_arr)
+    windows = windows.reshape((windows.shape[0]*windows.shape[1]), windows.shape[2])
+    other_df = pd.DataFrame(windows, columns=columns)
 
     statistical_features = calculate_statistical_features(
-        grouped_data[columns])
-    statistical_features = statistical_features.reset_index()
+        other_df.groupby('window_id'))
+    statistical_features = statistical_features.reset_index().astype('float64')
     frequency_features = calc_freq_features(
         df, columns, time_interval=time_interval, time_index=time_index)
     
-    print("stat feature shape: ", statistical_features.shape, time_interval)
-    print("freq feature shape: ", frequency_features.shape)
+    frequency_features = frequency_features.drop(columns=['timedelta']).astype('float64')
     
-    columns = ['window_id'] + ['T' + str(i) for i in range(1, 101)]
+    # print(statistical_features.columns.values)    
+    # print("stat feature shape: ", statistical_features.shape, time_interval)
+    # print("freq feature shape: ", frequency_features.shape)
+    
+    ### Calculate Stat features for touch
+    columns = ['window_id', 'framesum']
+    df['framesum'] = df[['T' + str(i) for i in range(1, 101)]].sum(axis=1)
+    grouped_data_touch = df[columns].groupby('window_id').apply(np.array).to_numpy()
 
-    utils.logger.info(f'Applying windows of length {time_index}')
-    grouped_data = df[columns].groupby('window_id').apply(np.array).to_numpy()
-
-    n_samples = window_size / 1e3 * fs
-    n_samples = int(n_samples)
-    utils.logger.info(f'Removing windows less than {window_size} ms ({n_samples})')
-
-    print("group data shape: ", np.array(grouped_data).shape)
     windows = []
-    for window in grouped_data:
-        # print("window shape: ", np.array(window).shape)
-        if window.shape[0] < n_samples:
-            utils.logger.info(f'Window removed {window.shape[0]}, expected size {n_samples}')
+    for window in grouped_data_touch:
+        # window = window[:mean_windowsize, :]
+        if window.shape[0] < N_SAMPLES:
+            utils.logger.info(f'Window removed {window.shape[0]}, expected size {N_SAMPLES}')
             continue
-        elif window.shape[0] > n_samples:
-            utils.logger.info(f'Window cropped {window.shape[0]}, expected size {n_samples}')
-            window = window[:n_samples, :]
-        # print("window shape: ", np.array(window).shape)
+        elif window.shape[0] > N_SAMPLES:
+            utils.logger.info(f'Window cropped {window.shape[0]}, expected size {N_SAMPLES}')
+            window = window[:N_SAMPLES, :]
+        # print("window shape: ", np.array(window).shape, n_samples)
         windows.append(window)
 
-    # print("windows shape: ", np.array(windows).shape, window_size, fs)
-    print("window id unique: ", df['window_id'].unique())
-
-    framesum_total = []
-    for i, window in enumerate(windows):
-        # if i > 0:
-        #     channel_means = np.mean(windows[i-1][:,1:], axis=0, keepdims=True) # calc the mean for each channel from the previous window
-        #     windows[i][:,1:] = windows[i][:,1:] - channel_means # subtract the mean of the previous window from from the current window
-
-        # Calculate framesum of touch data
-        framesum_total.append(np.mean(np.sum(window[:, 1:], axis=1)))
+    windows = np.array(windows)
+    windows = windows.reshape((windows.shape[0]*windows.shape[1]), windows.shape[2])
+    touch_df = pd.DataFrame(windows, columns=columns)
     
-    framesum_df = pd.DataFrame({'window_id': np.arange(0, len(framesum_total)), 'touch framesum': framesum_total})
+    statistical_features_touch = calculate_statistical_features(
+        touch_df.groupby('window_id'))
+    statistical_features_touch = statistical_features_touch.reset_index().astype('float64')
 
-    utils.logger.info(f'Calculating features for each window')
-    # de_features = calculate_de_features(
-        # windows)
+    # print(statistical_features, type(statistical_features))
 
-    statistical_features = pd.merge_asof(statistical_features, framesum_df, on=[
-    'window_id'], direction='nearest')
+    # utils.logger.info(f'Applying windows of length {time_index}')
 
-    all_features = pd.merge_asof(statistical_features, frequency_features, on=[
-        'window_id'], direction='nearest')
 
-    print("framesum shape: ", framesum_df.shape)
-    print("all features shape: ", all_features.shape)
+    # ### Calculate touch framesum
+    # columns = ['window_id'] + ['T' + str(i) for i in range(1, 101)]
+    # grouped_data = df[columns].groupby('window_id').apply(np.array).to_numpy()
 
-    print(list(all_features.columns.values))
+    # utils.logger.info(f'Removing windows less than {window_size} ms ({N_SAMPLES})')
 
+    remaining = len(grouped_data) - len(other_feat_windows_arr)
+    print(f"{len(other_feat_windows_arr)} out of {len(grouped_data)} windows remaining. Discarded {remaining}, {np.round(remaining/len(grouped_data), 2)*100}%.")
+
+    # framesum_total = []
+    # for i, window in enumerate(other_feat_windows_arr):
+    #     # Calculate framesum of touch data
+    #     framesum_total.append(np.mean(np.sum(window[:, 1:], axis=1)))
+    
+    # framesum_df = pd.DataFrame({'window_id': np.arange(0, len(framesum_total)), 'touch framesum': framesum_total})    
+
+    # utils.logger.info(f'Calculating features for each window')
+
+    if MODE == TOUCH_FEATURES_ONLY:
+        all_features = statistical_features_touch
+    elif MODE == OTHER_FEATURES_ONLY:
+        # print(statistical_features)
+        # print(frequency_features)
+        all_features = pd.merge_asof(statistical_features, frequency_features, on=[
+            'window_id'], direction='nearest')
+    elif MODE == ALL_FEATURES_INCLUDED:
+         # merge touch features with other features
+        statistical_features = pd.merge_asof(statistical_features, statistical_features_touch, on=[
+            'window_id'], direction='nearest')
+
+        all_features = pd.merge_asof(statistical_features, frequency_features, on=[
+            'window_id'], direction='nearest')
+    else: 
+        return None
+
+    
+    
+    # print(all_features.columns.values)
+
+    # print("framesum shape: ", framesum_df.shape)
+    # print("all features shape: ", all_features.shape)
+
+    # print(all_features)
     return all_features
 
 def calculate_features():
@@ -119,12 +157,14 @@ def calculate_features():
 
         for wsize in window_sizes:
             utils.logger.info(f'Calculating labels for window size: {wsize} ms')
-            features = calculate_features_per_participant(merged_data[pnum])
-            # features = calculate_features_per_participant(merged_data[pnum], time_interval=f"{wsize}ms", window_size=wsize)
+            # features = calculate_features_per_participant(merged_data[pnum])
+            features = calculate_features_per_participant(merged_data[pnum], time_interval=f"{wsize}ms", window_size=wsize)
 
 
             participant_feature = {}
             participant_feature[pnum] = features
+
+            print("feature dimensions: ", features.shape)
 
             if SAVE_PICKLE_FILE:
                 utils.logger.info('Saving data')

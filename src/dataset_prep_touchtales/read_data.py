@@ -14,6 +14,14 @@ import pandas as pd
 
 from tqdm import tqdm
 
+import pathlib
+import sys
+_parentdir = pathlib.Path(__file__).parent.parent.resolve()
+sys.path.insert(0, str(_parentdir))
+import utils
+from config_touchtale import COLLAPSED_PARTICIPANTS
+sys.path.remove(str(_parentdir))
+
 # Filenames and columns
 FILES_DICT = {
     "bpm.csv": ['timestamps', 'BPM'],
@@ -52,6 +60,20 @@ def read_dataset(src_dir=RAW_DATA_PATH, output_dir=OUTPUT_DIR, file_dict=FILES_D
     return subjects
 
 
+def read_dataset_all(src_dir=RAW_DATA_PATH, output_dir=OUTPUT_DIR, file_dict=FILES_DICT):
+    subject_data_dir = glob.glob(os.path.join(src_dir, 'p_all'))
+    all_subjects_files = [glob.glob(os.path.join(x, '*'))
+                          for x in subject_data_dir]
+    subject_files = all_subjects_files[0]
+    
+    match = re.search('_[a-zA-Z]+', subject_files[0])
+    pnum = 'p' + match.group(0)
+    subjects = {}
+    subjects[pnum] = parse_files(subject_files, file_dict)
+
+    return subjects
+
+
 def extract_pnum(filename: str):
     match = re.search('[0-9]?[0-9]', filename)
     return 'p' + "%02d" % int(match.group(0))
@@ -62,7 +84,7 @@ def parse_files(subject_files: list, file_dict=FILES_DICT):
 
 
     for file in tqdm(subject_files):
-        utils.logger.info(f'Assessing {file}')
+        print(f'Assessing {file}')
         filename = file.split('/')[-1]
 
 
@@ -75,13 +97,17 @@ def parse_files(subject_files: list, file_dict=FILES_DICT):
         print(file_dict[filename])
 
         x = pd.read_csv(file, names=file_dict[filename], header=0, low_memory=False)
+        print(len(x))
         subject_data.append({'filename': filename, 'df': x})
 
     return subject_data
 
 
 if __name__ == "__main__":
-    subject_data = read_dataset(RAW_DATA_PATH)
+    if COLLAPSED_PARTICIPANTS:
+        subject_data = read_dataset_all(RAW_DATA_PATH)
+    else:
+        subject_data = read_dataset(RAW_DATA_PATH)
 
     if SAVE_PICKLE_FILE:
         pickle_file_path = os.path.join(OUTPUT_DIR, OUTPUT_PICKLE_NAME)

@@ -47,6 +47,9 @@ def auc_group(data=None, x=None, y=None):
     if x is None:
         x = data.index.astype('int64')
         y = data.values
+
+    if x.shape[0] < 2:
+        return 0    
     return metrics.auc(x, y)
 
 

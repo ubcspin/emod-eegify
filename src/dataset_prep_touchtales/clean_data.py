@@ -68,6 +68,8 @@ def parse_data(subject_data: dict, file_order=FILE_ORDER):
             # subject_df.reset_index(inplace=True)
 
             df = pd.merge(df, subject_df, on='timestamps')
+
+        print("LENGTH OF DF: ", len(df))
         
         df['pnum'] = pnum
         df['timestamps'] = df.timestamps.astype('int64') / 1e6

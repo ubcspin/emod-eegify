@@ -10,7 +10,7 @@ import sys
 _parentdir = pathlib.Path(__file__).parent.parent.resolve()
 sys.path.insert(0, str(_parentdir))
 import utils
-from config_touchtale import EXP_PARAMS
+from config_touchtale import EXP_PARAMS, SUBJECT_IDS
 sys.path.remove(str(_parentdir))
 
 
@@ -24,12 +24,6 @@ SAVE_PICKLE_FILE = True
 OUTPUT_DIR = 'COMBINED_DATA_TOUCHTALE'
 OUTPUT_PICKLE_NAME = '_val_featurized_data.pk'
 OUTPUT_LABEL_NAME = '_val_labels.pk'
-
-SUBJECT_IDS = [x[:3] if 'p0' in x and 'cleaned' in x else '' for x in os.listdir('COMBINED_DATA_TOUCHTALE/')]
-SUBJECT_IDS = list(filter(lambda a: a != '', SUBJECT_IDS))
-print(SUBJECT_IDS)
-
-
 
 
 def check_val_is_subset(train_labels, val_labels):
@@ -55,15 +49,21 @@ if __name__ == "__main__":
             input_pickle_file_path = os.path.join(INPUT_DIR, training_data_filename)
             input_label_file_path = os.path.join(INPUT_DIR, str(window_size) + 'ms' + INPUT_LABEL_NAME)
 
+            print(input_label_file_path)
+
             try:
                 features = utils.load_pickle(pickled_file_path=input_pickle_file_path)
                 labels = utils.load_pickle(pickled_file_path=input_label_file_path)
             except:
                 features = utils.load_pickle(pickled_file_path=os.getcwd()+'/src/'+input_pickle_file_path)
                 labels = utils.load_pickle(pickled_file_path=os.getcwd()+'/src/'+input_label_file_path)
+                print(f"Loaded from {os.getcwd()+'/src/'+input_label_file_path}")
 
-            print(features[subject_id])
-            print(labels[subject_id])
+            print("feature dim: ", features[subject_id].shape)
+            print("labels dim: ", labels[subject_id].shape)
+
+            # print(features)
+            # print(labels[subject_id])
 
             split_data = True
             while split_data:
@@ -72,12 +72,16 @@ if __name__ == "__main__":
                 for train_index, val_index in splitter.split(features[subject_id]):
                     continue
 
-                print(train_index, val_index)
+                # print(max(train_index), max(val_index), len(labels[subject_id]))
 
                 train_l = labels[subject_id].iloc[train_index]
                 val_l = labels[subject_id].iloc[val_index]
 
-                print(train_l, val_l, subject_id)
+                # print(train_l)
+                # unique, counts = np.unique(train_l, return_counts=True)
+                # print(unique)
+
+                # print(train_l, val_l, subject_id)
 
                 split_data = check_val_is_subset(train_l, val_l) == False
                 if split_data == False:
@@ -86,6 +90,9 @@ if __name__ == "__main__":
                  
             train_features = features[subject_id].iloc[train_index]
             val_features = features[subject_id].iloc[val_index]
+
+            print(f"train feature dim: {train_features.shape}, val feature dim: {val_features.shape}")
+            print(f"train label dim: {train_l.shape}, val feature dim: {val_l.shape}")
 
 
             train_feature = {}
@@ -111,7 +118,7 @@ if __name__ == "__main__":
                 utils.pickle_data(data=val_feature,
                           file_path=output_pickle_file_path)
 
-
+        print(train_labels)
 
         if SAVE_PICKLE_FILE:
             output = str(window_size) + 'ms' + INPUT_LABEL_NAME

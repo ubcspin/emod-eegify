@@ -105,6 +105,10 @@ DROPOUT = 0.25
 DEVICE = 'cuda' if not torch.cuda.is_available() else 'cpu'
 
 MODELS = {
+    'SVC': SVC()  # takes a long time to train with linear kernels
+}
+
+
     # 'CNN': NeuralNetClassifier(module=cnn_classifier_original,
     #     module__dropout=DROPOUT,
     #     module__n_labels=LABEL_CLASS_COUNT,
@@ -117,13 +121,11 @@ MODELS = {
     #     train_split=None,
     #     device=DEVICE,
     #     verbose=0)
-    'ExtraTreesClassifier': ExtraTreesClassifier(),
-    'RandomForestClassifier': RandomForestClassifier(),
-    'AdaBoostClassifier': AdaBoostClassifier(),
-    'GradientBoostingClassifier': GradientBoostingClassifier(),
-    'XGBClassifier': XGBClassifier(),
-    'SVC': SVC()  # takes a long time to train with linear kernels
-}
+    # 'ExtraTreesClassifier': ExtraTreesClassifier(),
+    # 'RandomForestClassifier': RandomForestClassifier(),
+    # 'AdaBoostClassifier': AdaBoostClassifier(),
+    # 'GradientBoostingClassifier': GradientBoostingClassifier(),
+    # 'XGBClassifier': XGBClassifier(),
 
 PARAMS = {
 
@@ -132,11 +134,11 @@ PARAMS = {
     # 'local_classifier__lr': [LR*0.1, LR,  LR*10],
     # 'local_classifier__max_epochs' : [MAX_EPOCHS,  MAX_EPOCHS*2, MAX_EPOCHS*4]
     # }
-    'ExtraTreesClassifier': {'n_estimators': [16, 32]},
-    'RandomForestClassifier': {'n_estimators': [16, 32]},
-    'AdaBoostClassifier':  {'n_estimators': [16, 32]},
-    'GradientBoostingClassifier': {'n_estimators': [16, 32], 'learning_rate': [0.8, 1.0]},
-    'XGBClassifier': {'max_depth': (4, 6, 8), 'min_child_weight': (1, 5, 10)},
+    # 'ExtraTreesClassifier': {'n_estimators': [16, 32]},
+    # 'RandomForestClassifier': {'n_estimators': [16, 32]},
+    # 'AdaBoostClassifier':  {'n_estimators': [16, 32]},
+    # 'GradientBoostingClassifier': {'n_estimators': [16, 32], 'learning_rate': [0.8, 1.0]},
+    # 'XGBClassifier': {'max_depth': (4, 6, 8), 'min_child_weight': (1, 5, 10)},
     'SVC': [
         {'kernel': ['linear'], 'C': [1, 10]},
         {'kernel': ['rbf'], 'C': [1, 10], 'gamma': [0.001, 0.0001]},
